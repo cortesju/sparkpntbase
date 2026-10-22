@@ -80,8 +80,63 @@ main { max-width: 1100px; margin: 0 auto; padding: 2rem 1.25rem; }
 .steps { padding-left: 1.25rem; margin: 1.5rem 0; }
 .steps li { margin-bottom: .5rem; }
 
+/* Steps strip on the first screen, and the two report steps */
+.steps-strip, .report-steps { list-style: none; padding: 0; margin: 1.5rem 0 1rem; display: grid; gap: .75rem; }
+.steps-strip { grid-template-columns: repeat(3, 1fr); }
+.steps-strip li, .report-steps li { display: flex; gap: .75rem; align-items: flex-start; }
+.steps-strip b, .report-steps b { display: block; color: var(--ink); }
+.steps-strip small, .report-steps small { display: block; color: var(--muted); font-size: .85rem; line-height: 1.35; margin-top: .15rem; }
+.num { flex: 0 0 28px; height: 28px; border-radius: 50%; background: var(--ink); color: #fff; font: 600 .9rem Archivo, Arial, sans-serif; display: grid; place-items: center; }
+.report-steps { margin-top: 1.5rem; }
+.report-steps .btn { margin-bottom: .35rem; }
+.linkish { background: none; border: 0; padding: 0; font: inherit; color: var(--blue); text-decoration: underline; cursor: pointer; }
+@media (max-width: 700px) { .steps-strip { grid-template-columns: 1fr; } }
+
+/* Progress list during the check */
+.progress { display: block; }
+.progress-steps { list-style: none; padding: 0; margin: 0 0 .5rem; display: flex; flex-wrap: wrap; gap: .4rem 1.25rem; }
+.progress-steps li { color: var(--muted); padding-left: 1.4rem; position: relative; }
+.progress-steps li::before { content: ''; position: absolute; left: 0; top: .3rem; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); }
+.progress-steps li.active { color: var(--ink); font-weight: 500; }
+.progress-steps li.active::before { border-color: var(--red); border-top-color: transparent; animation: spin .8s linear infinite; }
+.progress-steps li.done { color: var(--ok-text); }
+.progress-steps li.done::before { border-color: var(--ok-text); background: var(--ok-text); }
+
+/* Findings groups */
+.next-action { background: var(--peach); color: var(--ink); border-radius: .75rem; padding: .75rem 1rem; font-weight: 500; }
+.group-title { font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 500; margin: 1.25rem 0 .5rem; }
+.fine-group { margin-top: 1rem; }
+.fine-group summary { cursor: pointer; font-weight: 500; color: var(--ok-text); padding: .5rem 0; }
+.fine-group .finding { margin-top: .6rem; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Console extras */
+.where { margin: .75rem 0 .25rem; font-size: .9rem; color: var(--muted); }
+.where b { color: var(--ink); }
+.confirm { background: var(--info-fill); border-radius: .75rem; padding: .9rem 1rem; margin: .5rem 0; }
+.confirm p { margin: 0 0 .5rem; color: var(--ink); font-weight: 500; }
+.confirm input { max-width: 260px; margin-bottom: .5rem; }
+.confirm .cta-row { margin: 0; }
+@media (max-width: 600px) { .term { height: 240px; } }
+
+/* Firmware banner and version cards on phones */
+.banner { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1.25rem; background: var(--info-fill); border-radius: .75rem; padding: .9rem 1rem; margin-bottom: 1rem; }
+.banner p { margin: 0; flex: 1 1 320px; color: var(--ink); }
+@media (max-width: 480px) {
+  .versions thead { display: none; }
+  .versions tr { display: block; padding: .5rem 0; border-bottom: 1px solid var(--line); }
+  .versions td { display: flex; justify-content: space-between; gap: 1rem; border: 0; padding: .15rem 0; }
+  .versions td::before { content: attr(data-label); color: var(--muted); font-size: .8rem; }
+}
+
+/* Footer simulators */
+footer .sims { flex-basis: 100%; }
+footer .sims a { margin-right: .25rem; }
+
 /* Drivers */
-.drivers { margin-top: 3.5rem; padding-top: 2rem; border-top: 1px solid var(--line); max-width: 900px; }
+.drivers { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--line); max-width: 900px; }
+.drivers summary { cursor: pointer; font: 600 1.15rem Archivo, Arial, sans-serif; color: var(--ink); padding: .25rem 0; }
+.drivers[open] summary { margin-bottom: 1rem; }
 .driver-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem 2rem; }
 .driver-grid h3 { margin-top: 1rem; font-size: 1.05rem; }
 .driver-grid p, .plain li { font-size: .95rem; }

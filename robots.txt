@@ -1,4 +1,6 @@
 # This is a personal study project styled after sparkpnt.com, not the official site,
 # so it stays out of search results. Delete this file to allow indexing.
+# The device support tool is a real customer page and may be indexed.
 User-agent: *
+Allow: /support/
 Disallow: /

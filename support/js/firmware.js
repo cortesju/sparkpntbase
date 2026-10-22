@@ -1,7 +1,7 @@
 // Firmware list, version comparison and the USB update of the main (ESP32) firmware.
 
-import { CONFIG } from './config.js?v=1792700804';
-import { parseEspVersion, parseSubsystemVersions, chipFromText } from './receiver.js?v=1792700804';
+import { CONFIG } from './config.js?v=1792701697';
+import { parseEspVersion, parseSubsystemVersions, chipFromText } from './receiver.js?v=1792701697';
 
 export async function loadFirmwareList() {
   let lastError = null;

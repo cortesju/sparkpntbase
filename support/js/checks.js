@@ -1,8 +1,8 @@
 // Diagnostic rules. Each finding: {id, level, title, detail, action?}
 // level: ok | info | warn | bad. action: {label, kind, args}
 
-import { installedVersions, latestMain, latestFor, compareMain, compareSubsystem, mainVersionOf, rowVersion } from './firmware.js?v=1792700804';
-import { parseEspVersion } from './receiver.js?v=1792700804';
+import { installedVersions, latestMain, latestFor, compareMain, compareSubsystem, mainVersionOf, rowVersion } from './firmware.js?v=1792701697';
+import { parseEspVersion } from './receiver.js?v=1792701697';
 
 const BT_TYPES = { 0: 'Bluetooth Classic (SPP)', 1: 'Bluetooth Low Energy', 2: 'Bluetooth Classic and Low Energy', 3: 'Off' };
 const STATES = { 0: 'ROVER', 1: 'BASE', 2: 'NTP', 3: 'BASE CASTER', 4: 'BASE ASSIST' };
@@ -40,12 +40,13 @@ export function runChecks(snap, fw) {
       'The page read something it did not recognize. The Console tab shows exactly what the unit printed.');
   }
   if (snap.rebootSeen) {
-    add('reboot', 'info', 'The unit restarted when this page opened the port',
-      'Opening a USB port pulses the reset line on these units. That is normal and nothing is wrong, but the fix it had was lost and it is reacquiring now.');
+    add('reboot', 'note', 'Connecting restarted the unit (normal)',
+      'Opening the USB port pulses the reset line, so the fix it had was lost and it is reacquiring now');
   }
   if (snap.errors.length) {
     add('partial', 'info', 'Some readings did not complete', snap.errors.join(' '));
   }
+  const nextOf = (id, text) => { const x = f.find((y) => y.id === id); if (x && (x.level === 'bad' || x.level === 'warn')) x.next = text; };
 
   // Main firmware
   const inst = mainVersionOf(snap);
@@ -55,11 +56,11 @@ export function runChecks(snap, fw) {
     if (inst.dev) {
       add('fw-dev', 'warn', `Main firmware is a developer build (${inst.raw})`,
         'Developer builds report themselves as newer than the matching release, so the unit never installs updates over WiFi. Updating over USB from this page puts a release build on it.',
-        { label: 'Open Update', kind: 'tab', args: 'update' });
+        { label: 'Open Firmware', kind: 'tab', args: 'update' });
     } else if (rel && compareMain(inst, rel) < 0) {
       add('fw-old', 'warn', `Main firmware ${inst.raw} is behind the current release ${rowVersion(rel)}`,
         'Newer firmware fixes known problems. It can be installed from this page over the USB cable, or by the unit itself over WiFi.',
-        { label: 'Open Update', kind: 'tab', args: 'update' });
+        { label: 'Open Firmware', kind: 'tab', args: 'update' });
     } else if (rel) {
       add('fw-ok', 'ok', `Main firmware ${inst.raw} is current`,
         beta && compareMain(inst, beta) < 0 ? `A beta build ${rowVersion(beta)} exists for testing.` : 'Nothing newer is published.');
@@ -81,7 +82,7 @@ export function runChecks(snap, fw) {
       } else if (cmp < 0) {
         add(`sub-${v.chip}`, 'warn', `${v.chip} firmware ${v.version} is behind ${rowVersion(row)}`,
           `The ${subsystemWord(v.subsystem)} has newer firmware. The unit installs it itself over WiFi from the Update tab.`,
-          { label: 'Open Update', kind: 'tab', args: 'update' });
+          { label: 'Open Firmware', kind: 'tab', args: 'update' });
       } else {
         add(`sub-${v.chip}`, 'ok', `${v.chip} firmware ${v.version} is current`, '');
       }
@@ -216,10 +217,20 @@ export function runChecks(snap, fw) {
   if (profile) add('profile', 'info', `Profile ${profile + 1} is active`, 'Settings profiles switch the whole configuration. Check that the one you expect is active.');
   if (snap.changed?.rows?.length) {
     const n = snap.changed.rows.filter((r) => !['deviceName', 'deviceId', 'bluetoothId', 'espFirmwareVersion', 'gnssFirmwareVersion', 'gnssModuleInfo'].includes(r.name)).length;
-    if (n) add('changed', 'info', `${n} settings differ from factory defaults`, 'They are listed in the report so we can see how the unit is configured. A factory reset is available in the Console tab if you want a clean start.');
+    if (n) add('changed', 'note', `${n} settings changed from defaults, listed in the report`, '');
   }
 
-  const order = { bad: 0, warn: 1, info: 2, ok: 3 };
+  // The single next step a person should take, taken from the most pressing finding.
+  nextOf('battery', 'Charge the unit.');
+  nextOf('gnss-offline', 'Restart the unit; if the receiver stays offline, send us the report.');
+  nextOf('fw-dev', 'Update the main firmware over USB from the Firmware tab.');
+  nextOf('fw-old', 'Update the main firmware from the Firmware tab.');
+  nextOf('bt-off', 'Turn Bluetooth on from the Console tab.');
+  nextOf('fix', (f.find((y) => y.id === 'fix')?.title || '').startsWith('NO FIX') ? 'Take the unit outside with a clear view of the sky.' : 'Check the corrections setup (WiFi, caster, account).');
+  nextOf('sd', 'Insert a microSD card, or turn logging off.');
+  nextOf('parser', 'Factory reset the unit from the Console tab, then run the check again.');
+
+  const order = { bad: 0, warn: 1, info: 2, ok: 3, note: 4 };
   f.sort((a, b) => order[a.level] - order[b.level]);
   return f;
 }

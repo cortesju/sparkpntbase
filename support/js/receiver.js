@@ -1,7 +1,7 @@
 // Talks to the RTK Everywhere firmware over its USB console:
 // the serial configuration menus plus the $SP command line.
 
-import { CONFIG } from './config.js?v=1792700804';
+import { CONFIG } from './config.js?v=1792701697';
 
 export function spFrame(body) {
   let cs = 0;
@@ -75,6 +75,7 @@ export class Receiver {
     this.inCli = false;
     this.busy = false;
     this.loraTimeoutOriginal = null;
+    this.where = 'nowhere yet'; // what the unit last printed about its menu state
     this._logHandlers = new Set();
     link.onLine((l) => this._onLine(l));
     link.onRaw(() => this._checkPartial());
@@ -92,6 +93,7 @@ export class Receiver {
   _onLine(line) {
     this._push('rx', line);
     this._parseLive(line);
+    this._parseWhere(line);
     for (const w of [...this.waiters]) {
       const m = w.re.exec(line);
       if (m) {
@@ -132,6 +134,16 @@ export class Receiver {
       this.inCli = false;
     }
     if (this.live.length > 400) this.live.splice(0, this.live.length - 400);
+  }
+
+  // Where the unit is, read from its own prints: a menu title, command mode, or the periodic
+  // status lines that only appear while the menu is closed.
+  _parseWhere(line) {
+    let m;
+    if ((m = /^Menu: (.+?)\s*$/.exec(line))) this.where = m[1] === 'Main' ? 'Main Menu' : m[1];
+    else if (/^COMMAND MODE/.test(line)) this.where = 'Command Mode';
+    else if (/^Exiting command mode/.test(line)) this.where = 'Main Menu';
+    else if (ROVER_RE.test(line) || BASE_RE.test(line) || BOOT_RE.test(line)) this.where = 'Closed';
   }
 
   lastLive(kind) {
@@ -282,11 +294,21 @@ export class Receiver {
 
   async enterCli() {
     if (this.inCli) return;
-    if (!this.inMenu) await this.openMenu();
+    // "+" only works from the main menu, so get there first from wherever the unit is.
+    if (this.inMenu && this.where === 'Main Menu') { /* already there */ } else await this.goMain();
     const from = this.log.length;
     await this.send('+\r');
-    await this.expect(/COMMAND MODE/, 3000, from);
+    try {
+      await this.expect(/COMMAND MODE/, 3000, from);
+    } catch (e) {
+      if (!(e instanceof NoAnswerError)) throw e;
+      await this.goMain();
+      const again = this.log.length;
+      await this.send('+\r');
+      await this.expect(/COMMAND MODE/, 3000, again);
+    }
     this.inCli = true;
+    this.inMenu = true;
   }
 
   async exitCli() {
