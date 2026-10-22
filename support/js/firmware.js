@@ -147,7 +147,13 @@ export function compareSubsystem(installed, row) {
 
 export function mainVersionOf(snap) {
   const inst = installedVersions(snap).find((v) => v.subsystem === 'Main');
-  return parseEspVersion(inst?.version) || parseEspVersion(snap.header?.version);
+  const v = parseEspVersion(inst?.version) || parseEspVersion(snap.header?.version);
+  if (!v) return null;
+  // subsystemVersions drops the "d" that marks a developer build; the menu header keeps it.
+  const shown = parseEspVersion(snap.cli?.espFirmwareVersion?.value) || parseEspVersion(snap.header?.version);
+  if (shown?.dev) { v.dev = true; v.raw = shown.raw; }
+  if (v.major >= 99) v.dev = true; // 99.99 is the number a locally compiled build reports
+  return v;
 }
 
 // ---- Download and flash ------------------------------------------------------

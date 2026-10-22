@@ -288,7 +288,7 @@ function updateLiveCard() {
   if (last && Date.now() - last.t < 30000) {
     $('#dev-fix').textContent = last.kind === 'rover' ? stateWord(last.state) : last.state;
     $('#dev-siv').textContent = last.siv;
-    $('#dev-acc').textContent = last.kind === 'rover' ? `${last.accuracy} ${last.units}` : '-';
+    $('#dev-acc').textContent = last.kind === 'rover' ? `${last.beyond ? '> ' : ''}${last.accuracy} ${last.units}` : '-';
     if (last.kind === 'base') $('#dev-mode').textContent = last.state;
   }
   const s = state.snap;

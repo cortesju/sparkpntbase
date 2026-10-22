@@ -147,6 +147,10 @@ export function runChecks(snap, fw) {
       add('fix', 'ok', `RTK FIX, about ${acc}, ${rover.siv} satellites`, 'Corrections are arriving and the position is centimeter level.');
     } else if (st === 'RTK FLOAT') {
       add('fix', 'info', `RTK FLOAT, about ${acc}, ${rover.siv} satellites`, 'Corrections arrive and the solution is converging. Stay still with open sky; it usually fixes within a minute.');
+    } else if (st === 'PPP') {
+      add('fix', 'ok', `PPP converged, about ${acc}, ${rover.siv} satellites`, 'The receiver is using satellite-broadcast corrections (Galileo HAS or PointPerfect over L-band).');
+    } else if (st === 'PPP CONVERGING') {
+      add('fix', 'info', `PPP CONVERGING, about ${acc}, ${rover.siv} satellites`, 'The receiver is converging on satellite-broadcast corrections (Galileo HAS or PointPerfect over L-band). With open sky this takes several minutes and ends at decimeter level or better.');
     } else {
       // GNSS or DGNSS: no corrections being used
       if (ntripOn && !/\bConnected\b/i.test(ntripStatus)) {

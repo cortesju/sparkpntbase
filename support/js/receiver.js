@@ -15,7 +15,7 @@ const HEADER_RE = /^(SparkPNT|SparkFun) (RTK )?(.+?) ([vd]?\d+\.\d+(?:\.\d+\.\d+
 const MODE_RE = /^Mode: (.+?)\s*$/;
 const BT_RE = /^\*\* Bluetooth (.+?) broadcasting as: (.+?) \*\*$/;
 const BT_OFF_RE = /^\*\* Bluetooth Turned Off \*\*$/;
-const ROVER_RE = /Rover Accuracy \(([^)]+)\): ([\d.]+), SIV: (\d+) GNSS State: (.+?)\s*$/;
+const ROVER_RE = /Rover Accuracy \(([^)]+)\): ([<>]?\s*[\d.]+), SIV: (\d+) GNSS State: (.+?)\s*$/;
 const BASE_RE = /^Base (Caster )?Mode - SIV: (\d+)/;
 const BATT_RE = /Batt \((\d+)%\)[:/ ]+Voltage: ([\d.]+)V/;
 const BOOT_RE = /^(rst:0x|ets Jul 29 2019|ets Jun  8 2016|configsip:|entry 0x)/;
@@ -119,7 +119,9 @@ export class Receiver {
   _parseLive(line) {
     let m;
     if ((m = ROVER_RE.exec(line))) {
-      this.live.push({ t: Date.now(), kind: 'rover', units: m[1], accuracy: parseFloat(m[2]), siv: parseInt(m[3], 10), state: m[4].trim() });
+      // "> 30.000" means beyond the receiver's reporting range
+      const beyond = m[2].trim().startsWith('>');
+      this.live.push({ t: Date.now(), kind: 'rover', units: m[1], accuracy: parseFloat(m[2].replace(/[<>\s]/g, '')), beyond, siv: parseInt(m[3], 10), state: m[4].trim() });
     } else if ((m = BASE_RE.exec(line))) {
       this.live.push({ t: Date.now(), kind: 'base', caster: !!m[1], siv: parseInt(m[2], 10), state: m[1] ? 'BASE CASTER' : 'BASE' });
     } else if ((m = BATT_RE.exec(line))) {
