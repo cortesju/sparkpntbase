@@ -77,8 +77,10 @@ export class SerialLink {
           if (value) this._onChunk(value);
         }
       } catch (e) {
-        lost = true;
-        this._error = e;
+        // Framing, parity and overrun errors are not fatal: the port stays open and hands out a
+        // fresh readable stream. The reset pulse on open produces one on some units.
+        const fatal = !this.port.readable || e.name === 'NetworkError' || /lost|disconnect/i.test(e.message || '');
+        if (fatal) { lost = true; this._error = e; }
       } finally {
         try { this.reader.releaseLock(); } catch { /* already released */ }
         this.reader = null;
