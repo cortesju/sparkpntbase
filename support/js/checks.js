@@ -1,8 +1,8 @@
 // Diagnostic rules. Each finding: {id, level, title, detail, action?}
 // level: ok | info | warn | bad. action: {label, kind, args}
 
-import { installedVersions, latestMain, latestFor, compareMain, compareSubsystem, mainVersionOf, rowVersion } from './firmware.js';
-import { parseEspVersion } from './receiver.js';
+import { installedVersions, latestMain, latestFor, compareMain, compareSubsystem, mainVersionOf, rowVersion } from './firmware.js?v=1792699453';
+import { parseEspVersion } from './receiver.js?v=1792699453';
 
 const BT_TYPES = { 0: 'Bluetooth Classic (SPP)', 1: 'Bluetooth Low Energy', 2: 'Bluetooth Classic and Low Energy', 3: 'Off' };
 const STATES = { 0: 'ROVER', 1: 'BASE', 2: 'NTP', 3: 'BASE CASTER', 4: 'BASE ASSIST' };

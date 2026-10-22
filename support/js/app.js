@@ -1,15 +1,15 @@
 // Page wiring: connect, check, console, report, update.
 
-import { CONFIG } from './config.js';
-import { SerialLink } from './link.js';
-import { SimLink } from './sim.js';
-import { Receiver, NoAnswerError, sleep } from './receiver.js';
-import { runChecks, stateWord } from './checks.js';
+import { CONFIG } from './config.js?v=1792699453';
+import { SerialLink } from './link.js?v=1792699453';
+import { SimLink } from './sim.js?v=1792699453';
+import { Receiver, NoAnswerError, sleep } from './receiver.js?v=1792699453';
+import { runChecks, stateWord } from './checks.js?v=1792699453';
 import {
   loadFirmwareList, latestMain, latestFor, rowVersion, fileUrl, downloadBinary, crc32, flashMain,
   installedVersions, mainVersionOf, compareMain, compareSubsystem,
-} from './firmware.js';
-import { buildReport, reportFileName, downloadText, emailSummary, mailtoUrl, shareReport } from './report.js';
+} from './firmware.js?v=1792699453';
+import { buildReport, reportFileName, downloadText, emailSummary, mailtoUrl, shareReport } from './report.js?v=1792699453';
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
