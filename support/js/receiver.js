@@ -368,6 +368,60 @@ export class Receiver {
     return { count: parseInt(p.value, 10), rows };
   }
 
+  // ---- Navigation that trusts prints, not guesses ---------------------------
+  // Firmware rules: outside the menus any byte opens the main menu (the byte itself is
+  // consumed); inside a menu an empty line closes that menu, silently when it is the main
+  // menu; in command mode an empty line does nothing and "exit" returns to the main menu.
+
+  // Wait briefly for anything to print after a probe. Resolves with the lines, or [] on silence.
+  async _probe(text, quietMs = 1500) {
+    const from = this.log.length;
+    await this.send(text);
+    const t0 = Date.now();
+    let lastLen = from;
+    while (Date.now() - t0 < quietMs) {
+      await sleep(100);
+      if (this.log.length !== lastLen) { lastLen = this.log.length; continue; }
+      // something printed and then went quiet for 100 ms: wait a little more for a menu to finish
+      if (lastLen > from) { await sleep(250); break; }
+    }
+    return this.linesSince(from);
+  }
+
+  // Get to the main menu from anywhere. Returns the header, or throws NoAnswerError.
+  async goMain(maxMs = 12000) {
+    const t0 = Date.now();
+    // From a submenu "x" returns cleanly; an empty line only earns an "Unknown choice".
+    let probe = this.inMenu && !this.inCli ? 'x\r' : '\r';
+    let silent = 0;
+    while (Date.now() - t0 < maxMs) {
+      const lines = await this._probe(probe);
+      if (lines.some((l) => /^Menu: Main/.test(l)) && lines.some((l) => /^x\) Exit/.test(l))) {
+        this.inMenu = true; this.inCli = false;
+        await sleep(200);
+        return this._headerBefore(this.log.length) || parseHeader(lines);
+      }
+      if (lines.some((l) => /^Menu: /.test(l))) { probe = 'x\r'; continue; }          // in a submenu: back out
+      if (lines.some((l) => /,ERROR,|^COMMAND MODE/.test(l))) { probe = 'exit\r'; continue; } // in command mode
+      // silence: the menu just closed, we are outside it, we are in command mode, or the console is gone
+      silent++;
+      if (silent >= 4) break;
+      probe = silent === 2 ? 'exit\r' : '\r';
+    }
+    this.inMenu = false; this.inCli = false;
+    throw new NoAnswerError('The unit did not open its menu');
+  }
+
+  // Open a first-level submenu by its key and wait for its title. Returns the printed lines.
+  async goSub(key, titleRe) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await this.goMain();
+      const lines = await this._probe(key + '\r', 3000);
+      if (lines.some((l) => titleRe.test(l))) { this.inMenu = true; this.inCli = false; return lines; }
+    }
+    throw new Error(`The unit did not open that menu`);
+  }
+
   // ---- Torch LoRa console timeout --------------------------------------------
   // A Torch hands its USB console to the LoRa radio 30 seconds after power on,
   // whatever happens on the console. Raise the timeout for this session; put it back on disconnect.

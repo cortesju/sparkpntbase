@@ -421,12 +421,25 @@ async function quickKey(key) {
   const rx = state.rx;
   if (!rx) return;
   switch (key) {
-    case 'menu': return guarded('Opening the main menu', async () => { await rx.exitCli(); await rx.openMenu(); showTab('console'); });
+    case 'menu': return guarded('Opening the main menu', async () => { await rx.goMain(); showTab('console'); });
     case 'system': return guarded('Opening system status', () => enterSub('s', /^Menu: System/));
     case 'gnss': return guarded('Opening the GNSS menu', () => enterSub('1', /^Menu: GNSS Receiver/));
     case 'firmware': return guarded('Opening the firmware menu', () => enterSub('f', /^Menu: Firmware Update/));
-    case 'back': return guarded('Going back', async () => { await rx.send('x\r'); });
-    case 'leave': return guarded('Leaving the menu', async () => { await rx.exitCli(); await rx.exitMenu(); sysLine('Menu closed. The unit is back to normal operation.'); });
+    case 'back': return guarded('Going back', async () => {
+      const lines = await rx._probe('x\r');
+      if (lines.some((l) => /^Menu: Main/.test(l))) { rx.inMenu = true; rx.inCli = false; sysLine('Back at the main menu.'); }
+      else if (lines.some((l) => /^Menu: /.test(l))) { rx.inMenu = true; }
+      else if (lines.some((l) => /Exiting command mode/.test(l))) { rx.inCli = false; rx.inMenu = true; }
+      else if (lines.some((l) => /,ERROR,/.test(l))) { sysLine('You are in command mode. Type exit, or use Main Menu.'); rx.inCli = true; }
+      else { rx.inMenu = false; rx.inCli = false; sysLine('Menu closed. The unit is back to normal operation; use Main Menu to reopen it.'); }
+    });
+    case 'leave': return guarded('Leaving the menu', async () => {
+      await rx.goMain();
+      await rx.send('x\r');
+      rx.inMenu = false; rx.inCli = false;
+      await sleep(300);
+      sysLine('Menu closed. The unit is back to normal operation.');
+    });
     case 'rover': return guarded('Switching to rover mode', () => switchMode('R', 'ROVER'));
     case 'base': return guarded('Switching to base mode', () => switchMode('B', 'BASE'));
     case 'bt-on': return guarded('Turning Bluetooth on', async () => {
@@ -455,13 +468,7 @@ async function quickKey(key) {
 }
 
 async function enterSub(key, titleRe) {
-  const rx = state.rx;
-  await rx.exitCli();
-  if (!rx.inMenu) await rx.openMenu();
-  const from = rx.log.length;
-  await rx.send(key + '\r');
-  await rx.expect(/^x\) Exit/, 4000, from);
-  if (!rx.linesSince(from).some((l) => titleRe.test(l))) sysLine('The unit opened a different menu than expected. Use Back (x) and try again.');
+  await state.rx.goSub(key, titleRe);
   showTab('console');
 }
 
@@ -469,11 +476,7 @@ async function enterSub(key, titleRe) {
 // close by themselves, so do not insist on a menu print afterwards. Confirm by reading lastState.
 async function switchMode(letter, word) {
   const rx = state.rx;
-  await rx.exitCli();
-  if (!rx.inMenu) await rx.openMenu();
-  const from = rx.log.length;
-  await rx.send('s\r');
-  await rx.expect(/^x\) Exit/, 4000, from);
+  await rx.goSub('s', /^Menu: System/);
   await rx.send(letter + '\r');
   await sleep(2500);
   for (let i = 0; i < 2; i++) {
