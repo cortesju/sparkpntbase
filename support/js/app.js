@@ -1,15 +1,15 @@
 // Page wiring: connect, check, console, report, update.
 
-import { CONFIG } from './config.js?v=1792699453';
-import { SerialLink } from './link.js?v=1792699453';
-import { SimLink } from './sim.js?v=1792699453';
-import { Receiver, NoAnswerError, sleep } from './receiver.js?v=1792699453';
-import { runChecks, stateWord } from './checks.js?v=1792699453';
+import { CONFIG } from './config.js?v=1792700804';
+import { SerialLink } from './link.js?v=1792700804';
+import { SimLink } from './sim.js?v=1792700804';
+import { Receiver, NoAnswerError, sleep } from './receiver.js?v=1792700804';
+import { runChecks, stateWord } from './checks.js?v=1792700804';
 import {
   loadFirmwareList, latestMain, latestFor, rowVersion, fileUrl, downloadBinary, crc32, flashMain,
   installedVersions, mainVersionOf, compareMain, compareSubsystem,
-} from './firmware.js?v=1792699453';
-import { buildReport, reportFileName, downloadText, emailSummary, mailtoUrl, shareReport } from './report.js?v=1792699453';
+} from './firmware.js?v=1792700804';
+import { buildReport, reportFileName, downloadText, emailSummary, mailtoUrl, shareReport } from './report.js?v=1792700804';
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -546,7 +546,9 @@ function refreshReport() {
 }
 
 function onDownload() {
-  downloadText(reportFileName(state.snap), currentReport());
+  const name = reportFileName(state.snap);
+  downloadText(name, currentReport());
+  $('#report-help').textContent = `Saved as ${name} in your downloads. Now press Email Us and attach that file to the message that opens.`;
 }
 
 function onEmail() {

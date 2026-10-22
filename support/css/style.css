@@ -41,11 +41,12 @@ p { margin: 0 0 1rem; }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 /* Header and footer */
-.top { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid var(--line); }
-.brand { display: flex; align-items: center; gap: .75rem; text-decoration: none; color: var(--ink); font-family: Archivo, Arial, sans-serif; font-weight: 600; }
+.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1rem; padding: 1rem 1.25rem; border-bottom: 1px solid var(--line); }
+.brand { display: flex; align-items: center; gap: .75rem; text-decoration: none; color: var(--ink); font-family: Archivo, Arial, sans-serif; font-weight: 600; white-space: nowrap; }
 .brand img { height: 22px; }
 .brand span { padding-left: .75rem; border-left: 1px solid var(--line); }
-.top nav a { margin-left: 1.25rem; color: rgba(23,23,23,.55); text-decoration: none; font-weight: 500; font-size: .9rem; }
+.top nav { display: flex; flex-wrap: wrap; gap: .25rem 1.25rem; }
+.top nav a { color: rgba(23,23,23,.55); text-decoration: none; font-weight: 500; font-size: .9rem; white-space: nowrap; }
 .top nav a:hover { color: var(--ink); }
 footer { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; padding: 1.5rem 1.25rem; margin-top: 3rem; border-top: 1px solid var(--line); font-size: .85rem; color: var(--muted); }
 
@@ -116,7 +117,8 @@ code { font-family: var(--mono); font-size: .9em; background: var(--light); padd
 
 /* Tabs */
 .tabs { display: flex; gap: .25rem; border-bottom: 1px solid var(--line); margin: 1.5rem 0 1.25rem; }
-.tabs button { font: 500 1rem Roboto, Arial, sans-serif; background: none; border: 0; border-bottom: 3px solid transparent; padding: .6rem 1rem; color: var(--muted); cursor: pointer; }
+.tabs button { font: 500 1rem Roboto, Arial, sans-serif; background: none; border: 0; border-bottom: 3px solid transparent; padding: .6rem 1rem; color: var(--muted); cursor: pointer; white-space: nowrap; }
+@media (max-width: 480px) { .tabs button { padding: .6rem .6rem; font-size: .95rem; } }
 .tabs button.active { color: var(--ink); border-bottom-color: var(--red); }
 .tabs button .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--red); margin-left: .4rem; vertical-align: middle; }
 
@@ -132,6 +134,10 @@ code { font-family: var(--mono); font-size: .9em; background: var(--light); padd
 .finding h4 { margin: 0 0 .2rem; font: 500 1rem Roboto, Arial, sans-serif; color: var(--ink); }
 .finding p { margin: 0; font-size: .92rem; }
 .finding .btn { white-space: nowrap; }
+@media (max-width: 600px) {
+  .finding { grid-template-columns: auto 1fr; }
+  .finding .btn { grid-column: 2; justify-self: start; }
+}
 
 /* Console */
 .keyrow { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin-bottom: .5rem; }

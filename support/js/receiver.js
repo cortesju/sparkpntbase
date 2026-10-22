@@ -1,7 +1,7 @@
 // Talks to the RTK Everywhere firmware over its USB console:
 // the serial configuration menus plus the $SP command line.
 
-import { CONFIG } from './config.js?v=1792699453';
+import { CONFIG } from './config.js?v=1792700804';
 
 export function spFrame(body) {
   let cs = 0;
