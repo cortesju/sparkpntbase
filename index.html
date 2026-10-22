@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PNT Lab - Learn, Track, and Master RTK</title>
+<link rel="stylesheet" href="assets/style.css?v=1786981062">
+<style>
+  .projects { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; padding: 0 var(--page-pad) 2rem; max-width: 1400px; margin: 0 auto; }
+  .project-card { display: flex; flex-direction: column; gap: .75rem; }
+  .project-card h3 { font-size: 1.35rem; }
+  .project-card p { font-size: .95rem; flex: 1; }
+  .project-card .meta { display: flex; align-items: center; justify-content: space-between; }
+  .highlight-band { background: var(--highlight); border-radius: var(--card-radius); margin: 3rem auto; max-width: 1400px; padding: clamp(1.5rem, 4vw, 3rem); margin-left: var(--page-pad); margin-right: var(--page-pad); }
+  .highlight-band h2 { font-size: clamp(1.4rem, 3vw, 2rem); margin-bottom: .5rem; }
+  @media (min-width: 1450px) { .highlight-band { margin-left: auto; margin-right: auto; } }
+</style>
+<!-- PNT Lab public build 2026-10-22. Client tracker and outreach research are not part of this site. -->
+</head>
+<body>
+
+<header class="site-header">
+  <a class="brand" href="index.html"><span class="spark">⌖</span> PNT Lab</a>
+  <nav class="site-nav">
+    <a href="index.html" class="active">Home</a>
+    <a href="study/index.html">Study Tracker</a>
+    <a href="products/index.html">Product Guide</a>
+    <a href="atlas/index.html">RTK Atlas</a>
+    <a href="#" title="Coming soon">Corrections</a>
+    <a href="program/index.html">Trial &amp; Corps</a>
+    <a href="support/index.html">Device Support</a>
+  </nav>
+</header>
+
+<section class="hero">
+  <div class="kicker">Personal knowledge base · Week 1 and beyond</div>
+  <h1>All things RTK, in one place.</h1>
+  <p>Projects grown from the Week-1 study docs and the work since: track what you know, master the product line, map the corrections landscape, and rebuild the outreach program. Styled after sparkpnt.com so anything here can graduate to the real site.</p>
+</section>
+
+<div class="projects">
+  <div class="card project-card">
+    <div class="meta"><span class="tag tag-live">Live</span></div>
+    <h3>Device Support</h3>
+    <p>Plug a TX2, Torch or FP series unit into this computer over USB: the page checks it, explains what it finds, opens its configuration menu with buttons instead of a terminal, writes a report for support and updates firmware.</p>
+    <a class="btn btn-primary btn-sm" href="support/index.html">Open support tool</a>
+  </div>
+  <div class="card project-card">
+    <div class="meta"><span class="tag tag-live">Live</span></div>
+    <h3>Study Tracker</h3>
+    <p>Every concept from the study docs as a trackable checklist - mark what you know, drill what you don't, and quiz yourself with the real self-check questions.</p>
+    <a class="btn btn-primary btn-sm" href="study/index.html">Open tracker</a>
+  </div>
+  <div class="card project-card">
+    <div class="meta"><span class="tag tag-live">Live</span></div>
+    <h3>Product Guide</h3>
+    <p>The SparkPNT lineup explained twice: full specs and competitor context for professionals, and a plain-language "which unit do I need?" path for everyone else.</p>
+    <a class="btn btn-primary btn-sm" href="products/index.html">Open guide</a>
+  </div>
+  <div class="card project-card">
+    <div class="meta"><span class="tag tag-live">Live</span></div>
+    <h3>RTK Atlas</h3>
+    <p>All things RTK plus an interactive map: click where you work and see the RTK services available there - free state networks, PointPerfect, Galileo HAS, or your own base.</p>
+    <a class="btn btn-primary btn-sm" href="atlas/index.html">Open atlas</a>
+  </div>
+  <div class="card project-card">
+    <div class="meta"><span class="tag tag-soon">Planned</span></div>
+    <h3>Corrections Explorer</h3>
+    <p>The whole corrections landscape - RTK, network RTK, SSR services, PPP, and post-processing - with honest accuracy, price, and coverage comparisons.</p>
+    <a class="btn btn-outline btn-sm" href="#">Coming soon</a>
+  </div>
+  <div class="card project-card">
+    <div class="meta"><span class="tag tag-live">Live</span></div>
+    <h3>Trial &amp; Field Corps Interface</h3>
+    <p>The customer-facing mockup of the program: 30-day field trial with the five-question screen, university seed kits, and the Field Corps application - as it would look on sparkpnt.com.</p>
+    <a class="btn btn-primary btn-sm" href="program/index.html">Open mockup</a>
+  </div>
+  <div class="card project-card">
+    <div class="meta"><span class="tag tag-live">Live</span></div>
+    <h3>Fleet Tracker (Sparkle-style)</h3>
+    <p>The internal side of the same program, styled after Sparkle: the trial fleet table from doc 05 with lifecycle-email tracking, overdue flags, and the program metrics.</p>
+    <a class="btn btn-primary btn-sm" href="fleet/index.html">Open tracker</a>
+  </div>
+  <div class="card project-card">
+    <div class="meta"><span class="tag tag-live">Live</span></div>
+    <h3>Visual Lab</h3>
+    <p>Nine interactive explainers for the physics behind every call: what accuracy looks like, Fix vs Float live, the datum shift, sky view, and why base and rover must match.</p>
+    <a class="btn btn-primary btn-sm" href="lab/index.html">Open lab</a>
+  </div>
+</div>
+
+<div class="highlight-band">
+  <h2>Treat yourself as customer number one.</h2>
+  <p>Every point of confusion you hit while studying is a docs-feedback item. The tracker has a notes field on every concept - use it, then export the list for the product lead.</p>
+</div>
+
+<footer class="site-footer">
+  <span>PNT Lab - a personal study project. Not an official SparkPNT site.</span>
+  <span><a href="https://www.sparkpnt.com" target="_blank" rel="noopener">sparkpnt.com</a> · <a href="https://docs.sparkpnt.com" target="_blank" rel="noopener">docs</a> · <a href="https://community.sparkpnt.com" target="_blank" rel="noopener">forum</a></span>
+</footer>
+
+</body>
+</html>

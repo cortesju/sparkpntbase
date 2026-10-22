@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RTK Atlas - PNT Lab</title>
+<link rel="stylesheet" href="../assets/style.css?v=1786981062">
+<link rel="stylesheet" href="../assets/vendor/leaflet.css?v=1788198246">
+<style>
+  main { max-width: 1250px; margin: 0 auto; padding: 0 var(--page-pad) 3rem; }
+
+  .atlas-layout { display: grid; grid-template-columns: 1fr 380px; gap: 1.4rem; align-items: start; }
+  @media (max-width: 900px) { .atlas-layout { grid-template-columns: 1fr; } }
+
+  #map { height: 520px; border-radius: var(--card-radius); box-shadow: var(--shadow); z-index: 1; }
+  .leaflet-container { font-family: var(--font-body); background: #f4f6f8; }
+
+  .legend { display: flex; gap: 1.1rem; flex-wrap: wrap; margin: .9rem 0 0; font-size: .82rem; }
+  .legend .key { display: flex; align-items: center; gap: .4rem; }
+  .legend .swatch { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+
+  /* State panel */
+  .state-panel { position: sticky; top: 5rem; }
+  .state-panel .card { padding: 1.4rem 1.5rem; }
+  .state-panel h2 { font-size: 1.5rem; margin-bottom: .2rem; }
+  .status-pill { display: inline-block; font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: .3rem .8rem; border-radius: 999px; color: #fff; margin: .4rem 0 .8rem; }
+  .state-panel .net { font-size: .95rem; margin-bottom: .6rem; }
+  .state-panel .net strong { color: var(--heading); }
+  .state-panel .notes { font-size: .87rem; background: var(--info-bg); border-radius: .6rem; padding: .7rem .9rem; margin-bottom: .8rem; }
+  .state-panel .hint { font-size: .85rem; color: #999; }
+  .universal-mini { border-top: 1px solid var(--border); margin-top: 1rem; padding-top: .9rem; }
+  .universal-mini h3 { font-size: .8rem; text-transform: uppercase; letter-spacing: .07em; color: #999; margin-bottom: .5rem; }
+  .universal-mini ul { list-style: none; font-size: .85rem; }
+  .universal-mini li { margin-bottom: .35rem; }
+  .universal-mini .cost { color: var(--teal); font-weight: 700; }
+
+  /* Solutions catalog */
+  section.block { margin: 3rem 0 0; }
+  section.block > h2 { font-size: clamp(1.4rem, 2.5vw, 1.9rem); margin-bottom: .4rem; }
+  section.block > .sub { color: #777; margin-bottom: 1.2rem; max-width: 70ch; }
+  .sol-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.2rem; }
+  .sol-card h3 { font-size: 1.1rem; }
+  .sol-card .meta { display: flex; gap: .5rem; flex-wrap: wrap; margin: .45rem 0 .55rem; }
+  .sol-card .chip { font-size: .72rem; font-weight: 700; padding: .2rem .65rem; border-radius: 999px; background: rgba(51,51,51,.06); color: var(--heading); }
+  .sol-card .chip.cost { background: var(--success-bg); color: var(--success-text); }
+  .sol-card .chip.acc { background: var(--highlight); color: var(--heading); }
+  .sol-card p { font-size: .88rem; }
+
+  /* Concepts strip */
+  .concept-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.2rem; }
+  .concept-strip .card h4 { color: var(--accent); margin-bottom: .35rem; }
+  .concept-strip .card p { font-size: .88rem; }
+
+  .disclaimer { background: var(--info-bg); border-radius: var(--card-radius); padding: 1rem 1.3rem; font-size: .85rem; color: var(--info-text); margin-top: 1rem; }
+
+  /* ---------- State panel additions ---------- */
+  .statelinks { display: flex; gap: .5rem; flex-wrap: wrap; margin: .7rem 0 .2rem; }
+  .statelinks a { font-size: .82rem; text-decoration: none; border: 1px solid var(--border); border-radius: 999px;
+    padding: .3rem .85rem; color: var(--price-blue); transition: all .2s; }
+  .statelinks a:hover { border-color: var(--price-blue); background: #F4F8FB; }
+  .statelinks a.primary { background: var(--heading); border-color: var(--heading); color: #fff; }
+  .statelinks a.primary:hover { background: var(--accent); border-color: var(--accent); }
+  .verified { font-size: .74rem; color: #999; margin-top: .8rem; padding-top: .6rem; border-top: 1px solid var(--border); }
+  .universal-mini .jump { display: inline-block; margin-top: .6rem; font-size: .8rem; color: var(--price-blue); }
+
+  /* ---------- Grouped options ---------- */
+  .sol-group { margin-bottom: 2.2rem; }
+  .group-title { font-size: 1.05rem; margin-bottom: .2rem; }
+  .group-blurb { font-size: .88rem; color: #666; margin-bottom: 1rem; max-width: 68ch; }
+  .sol-link { display: inline-block; margin-top: .7rem; font-size: .8rem; color: var(--price-blue); }
+
+  /* ---------- Connect steps ---------- */
+  .steps { list-style: none; counter-reset: st; max-width: 74ch; }
+  .steps li { position: relative; padding: .8rem 0 .8rem 2.4rem; border-top: 1px solid var(--border); counter-increment: st; }
+  .steps li:first-child { border-top: none; }
+  .steps li::before { content: counter(st); position: absolute; left: 0; top: .95rem; width: 1.6rem; height: 1.6rem;
+    border-radius: 50%; background: var(--heading); color: #fff; font-size: .78rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; }
+  .steps li b { display: block; font-weight: 500; color: var(--heading); font-size: .97rem; margin-bottom: .2rem; }
+  .steps li span { display: block; font-size: .89rem; color: #666; line-height: 1.55; }
+
+  /* ---------- Troubleshooting ---------- */
+  .trouble-row { display: grid; grid-template-columns: 1fr 1.15fr 1.5fr; gap: 1.2rem; padding: .95rem 0;
+    border-top: 1px solid var(--border); align-items: start; }
+  .trouble-row:first-child { border-top: none; }
+  .t-sym { font-weight: 500; color: var(--heading); font-size: .93rem; }
+  .t-looks, .t-fix { font-size: .87rem; color: #555; line-height: 1.5; }
+  .t-looks span, .t-fix span { display: block; font-size: .68rem; text-transform: uppercase; letter-spacing: .07em;
+    color: #aaa; font-weight: 700; margin-bottom: .2rem; }
+  .t-looks { color: #8a6d3b; }
+  @media (max-width: 780px) { .trouble-row { grid-template-columns: 1fr; gap: .5rem; } }
+
+  .mapbar { display: flex; gap: .4rem; align-items: center; margin-bottom: .6rem; flex-wrap: wrap; }
+  .viewbtn { border: 1px solid var(--border); background: #fff; border-radius: 999px; padding: .3rem .9rem;
+    font-family: var(--font-body); font-size: .82rem; cursor: pointer; color: var(--text); }
+  .viewbtn:hover { border-color: var(--heading); }
+  .viewbtn.on { background: var(--heading); border-color: var(--heading); color: #fff; }
+  .mapbar-hint { font-size: .76rem; color: #999; margin-left: auto; }
+
+  .troubleq { width: 100%; font-family: var(--font-body); font-size: .95rem; padding: .8rem 1rem; margin-bottom: 1.2rem;
+    border: 1px solid var(--border); border-radius: .6rem; background: rgba(23,23,23,.03); color: var(--text); }
+  .troubleq:focus { outline: none; border-color: var(--heading); background: #fff; }
+  .linkish { background: none; border: none; font-family: var(--font-body); font-size: inherit;
+    color: var(--price-blue); cursor: pointer; padding: 0; text-decoration: underline; }
+
+  .flow { border-radius: .8rem; padding: 1rem 1.1rem; margin: 1rem 0 .3rem; }
+  .flow-go { background: var(--success-bg); }
+  .flow-choose { background: #F5F7F9; }
+  .flow h3 { font-size: .95rem; margin-bottom: .5rem; }
+  .flow-why { font-size: .86rem; color: #555; margin-bottom: .7rem; }
+  .flow ol { margin: 0 0 .3rem 1.1rem; }
+  .flow li { font-size: .87rem; line-height: 1.5; margin-bottom: .4rem; }
+  .flow .jump { display: inline-block; margin-top: .4rem; font-size: .8rem; color: var(--price-blue); }
+  .optable { width: 100%; border-collapse: collapse; font-size: .82rem; margin-bottom: .3rem; }
+  .optable th { text-align: left; font-size: .68rem; text-transform: uppercase; letter-spacing: .05em;
+    color: #999; font-weight: 700; padding: .3rem .4rem; border-bottom: 1px solid var(--border); }
+  .optable td { padding: .35rem .4rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .optable tr:last-child td { border-bottom: none; }
+  .maplegend-note { font-size: .76rem; color: #999; margin-top: .5rem; max-width: 70ch; }
+  .corstoggle { font-size: .8rem; color: var(--text); display: inline-flex; align-items: center; gap: .35rem; cursor: pointer; }
+  .corstoggle input { accent-color: var(--price-blue); }
+  .cors-dot { fill: #0F4269; fill-opacity: .75; stroke: #fff; stroke-width: .5; }
+  .cors-count { font-size: .82rem; color: #555; background: #F4F8FB; border-radius: .5rem; padding: .5rem .7rem; margin-top: .7rem; }
+  .cors-count b { color: var(--price-blue); }
+  .base-dot { fill: #108474; fill-opacity: .8; stroke: #fff; stroke-width: .6; }
+  .modebar { display: flex; gap: .3rem; margin-bottom: .4rem; flex-wrap: wrap; }
+  .modebtn { border: 1px solid var(--border); background: #fff; border-radius: .5rem; padding: .4rem .9rem;
+    font-family: var(--font-body); font-size: .85rem; cursor: pointer; color: var(--text); }
+  .modebtn:hover { border-color: var(--heading); }
+  .modebtn.on { background: var(--heading); border-color: var(--heading); color: #fff; }
+  .modehint { font-size: .82rem; color: #777; margin-bottom: .7rem; }
+  .servicepick { font-family: var(--font-body); font-size: .8rem; padding: .25rem .5rem;
+    border: 1px solid var(--border); border-radius: .4rem; background: #fff; }
+  .servicenote { font-size: .78rem; color: #888; margin-top: .5rem; max-width: 74ch; }
+  .stationsblurb { font-size: .82rem; color: #666; line-height: 1.6; margin-top: .6rem; max-width: 82ch;
+    background: #F7F9FA; border-radius: .6rem; padding: .8rem 1rem; }
+  .stationsblurb b { color: var(--heading); }
+  .source-row { display: grid; grid-template-columns: 210px 1fr; gap: 1.2rem; padding: .9rem 0;
+    border-top: 1px solid var(--border); }
+  .source-row:first-child { border-top: none; }
+  .s-what { font-weight: 500; color: var(--heading); font-size: .92rem; }
+  .s-detail { font-size: .87rem; color: #555; line-height: 1.55; }
+  .s-links { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .5rem; }
+  .s-links a { font-size: .78rem; border: 1px solid var(--border); border-radius: 999px;
+    padding: .2rem .7rem; text-decoration: none; color: var(--price-blue); }
+  .s-links a:hover { border-color: var(--price-blue); background: #F4F8FB; }
+  @media (max-width: 700px) { .source-row { grid-template-columns: 1fr; gap: .3rem; } }
+  /* Chrome rings a clicked SVG path with a rounded rectangle around its bounding box,
+     which reads as a black box around the state. Keyboard users still get the ring. */
+  .leaflet-container path:focus:not(:focus-visible),
+  .leaflet-container:focus:not(:focus-visible) { outline: none; }
+  .leaflet-container path:focus { outline-offset: 2px; }
+  .leaflet-tooltip .tt-warn { color: #B45309; font-weight: 600; font-size: .92em; }
+  .leaflet-tooltip .tt-ok { color: #108474; font-weight: 600; font-size: .92em; }
+  .leaflet-tooltip .tt-note { color: #666; font-size: .9em; display: inline-block; max-width: 24em;
+    white-space: normal; line-height: 1.4; margin-top: .25rem; }
+  .casterbox { border: 1px solid var(--border); border-radius: .7rem; padding: .8rem 1rem; margin: .9rem 0 .3rem; }
+  .caster-h { font-size: .78rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #666; margin-bottom: .5rem; }
+  .castertab { width: 100%; border-collapse: collapse; font-size: .85rem; }
+  .castertab td { padding: .25rem 0; vertical-align: top; }
+  .castertab td:first-child { color: #666; width: 42%; }
+  .castertab code { background: rgba(23,23,23,.05); border-radius: .3rem; padding: .1rem .4rem; font-size: .95em; }
+  .caster-p { font-size: .85rem; color: #555; line-height: 1.55; margin: 0 0 .5rem; }
+  .verified.unchecked { color: #B45309; background: #FDF6EC; border-radius: .5rem;
+    padding: .5rem .7rem; line-height: 1.5; }
+</style>
+<!-- PNT Lab public build 2026-10-22. Client tracker and outreach research are not part of this site. -->
+</head>
+<body>
+
+<header class="site-header">
+  <a class="brand" href="../index.html"><span class="spark">⌖</span> PNT Lab</a>
+  <nav class="site-nav">
+    <a href="../index.html">Home</a>
+    <a href="../study/index.html">Study Tracker</a>
+    <a href="../products/index.html">Product Guide</a>
+    <a href="index.html" class="active">RTK Atlas</a>
+    <a href="../program/index.html">Trial &amp; Corps</a>
+    <a href="../support/index.html">Device Support</a>
+  </nav>
+</header>
+
+<main>
+  <section class="hero" style="padding-left:0;padding-right:0;padding-bottom:1.5rem;">
+    <div class="kicker">All things RTK</div>
+    <h1>What can you get where you stand?</h1>
+    <p>Click a state to see its real-time corrections situation - free state networks, restricted ones, and the options that work everywhere. Below the map: every RTK-class solution on the market, and the concepts behind them.</p>
+  </section>
+
+  <div class="atlas-layout">
+    <div>
+      <div class="modebar">
+        <button class="modebtn on" data-mode="networks">Who provides corrections</button>
+        <button class="modebtn" data-mode="stations">Physical stations</button>
+        <button class="modebtn" data-mode="coverage">Service coverage</button>
+      </div>
+      <p class="modehint" id="modehint">Who provides real-time corrections where you work, and on what terms.</p>
+      <div class="mapbar">
+        <button class="viewbtn" data-view="world">World</button>
+        <button class="viewbtn on" data-view="usa">United States</button>
+        <button class="viewbtn" id="backbtn" style="display:none">Back out</button>
+        <span id="stationctl" style="display:none">
+          <label class="corstoggle"><input type="checkbox" id="showrtn" checked> State network stations</label>
+          <label class="corstoggle"><input type="checkbox" id="showbases" checked> Community bases</label>
+        </span>
+        <span id="servicectl" style="display:none">
+          <select id="servicepick" class="servicepick"></select>
+        </span>
+        <span class="mapbar-hint" id="maphint">Click any country. In the US, click a state.</span>
+      </div>
+      <div id="map"></div>
+      <div class="legend" id="legend"></div>
+      <p class="servicenote" id="servicenote"></p>
+      <p class="stationsblurb" id="stationsblurb" style="display:none">
+        <b>Community bases</b> are somebody's own base station, a farmer's or a surveyor's or a hobbyist's, shared
+        publicly through the RTK2go caster. You can point a rover at one and get a live fix, which is why they are
+        here. Free, no guarantee: nobody is on the hook if one disappears tomorrow, and coverage is wherever people
+        happen to have put one.
+        <br><br>
+        <b>State network stations</b> are the antennas operated by the agency that runs each state's network, for
+        the states where we could identify that agency. NGS publishes their positions as part of the CORS metadata,
+        so these are the network's real physical footprint rather than an estimate. Two honest caveats: a station
+        being registered with NGS does not prove it is in the network's live solution on any given day, and with a
+        VRS mountpoint you never connect to one specific station anyway, the correction is computed for where you
+        are standing. What this layer is genuinely good for is seeing how dense the coverage is around the place
+        your customer actually works, and how far the nearest antenna is.
+        <br><br>
+        We tried to read station positions from the casters themselves first. Of 16 probed, 5 answered without
+        credentials and every one reported 0,0, which is correct behaviour for a VRS mountpoint rather than a fault.
+        That is why this comes from the NGS metadata instead.
+        <br><br>
+        <b>CORS stations used to be on this map and have been taken off.</b> They are permanent government reference
+        stations that feed OPUS post-processing, and you cannot connect to one for a live fix, so on a map about
+        real-time corrections they implied something they do not offer. They belong with post-processing.
+      </p>
+      <p class="maplegend-note">In world view the United States is drawn in blue because its detail lives one level down: click it, or use the United States button, to get per-state networks. Countries in grey have not been researched yet.</p>
+      <div class="disclaimer"><strong>Data honesty:</strong> statuses compiled Aug 2026 from the E38 state-access list, internal notes, and state DOT sites. States marked "verify" have conflicting sources. Access policies change - always confirm on the network's own site before telling a customer.</div>
+    </div>
+
+    <aside class="state-panel">
+      <div class="card" id="panel">
+        <h2>Pick a state</h2>
+        <p class="hint">Click any state on the map. The first support question is always "which state are you in?" - because a free network a competitor never mentioned is the cheapest goodwill there is.</p>
+        <div class="universal-mini">
+          <h3>Available everywhere</h3>
+          <ul>
+            <li><span class="cost">$15/mo</span> - PointPerfect Flex, 3–6 cm</li>
+            <li><span class="cost">Free</span> - Galileo HAS, &lt;20 cm (TX2/FPL)</li>
+            <li><span class="cost">Free</span> - OPUS post-processing (not live)</li>
+            <li><span class="cost">Hardware</span> - your own base, ~1 cm</li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <section class="block">
+    <h2>Every way to get RTK-class accuracy.</h2>
+    <div class="sub">The whole market, free options first, then paid. Any of these feed our hardware (standard NTRIP/RTCM), and most feed anyone else's too.</div>
+    <div id="solutions-block"><div class="sol-grid" id="solutions"></div></div>
+  </section>
+
+
+  <section class="block">
+    <h2>Where this comes from.</h2>
+    <p class="lead">Every dataset on this page, and the source you can check it against.</p>
+    <div id="sources"></div>
+  </section>
+
+  <section class="block" id="connect">
+    <h2>Connecting to a state network.</h2>
+    <p class="lead">Six steps, in the order you actually do them. Most failures happen at step four or five.</p>
+    <ol class="steps" id="connect-steps"></ol>
+  </section>
+
+  <section class="block">
+    <h2>When NTRIP will not behave.</h2>
+    <p class="lead">Describe it the way you would say it out loud. Eight settings account for nearly every
+    failed NTRIP connection, and each fails in its own recognisable way.</p>
+    <input type="search" id="trouble-q" class="troubleq" autocomplete="off"
+           placeholder="What is it doing? For example: will not fix, keeps disconnecting, wrong password">
+    <div id="trouble"></div>
+  </section>
+
+  <section class="block">
+    <h2>The concepts, in one screen.</h2>
+    <div class="sub">The mental models behind the map. For the full set with self-quizzes, use the <a href="../study/index.html">Study Tracker</a>.</div>
+    <div class="concept-strip">
+      <div class="card"><h4>Why corrections at all</h4><p>Standalone GNSS lands within a meter or a few: atmosphere, clocks, orbits, multipath. RTK cancels those errors against a base and resolves carrier phase to ~1 cm.</p></div>
+      <div class="card"><h4>OSR vs SSR</h4><p>OSR is a correction made for where you're standing (network RTK, 1–2 cm, needs nearby stations). SSR is a weather map of GNSS errors broadcast over a continent (Flex 3–6 cm, HAS ~20 cm) - no gaps, slightly coarser.</p></div>
+      <div class="card"><h4>Fix vs Float</h4><p>Float: corrections arriving, the receiver still solving the last math step - decimeter. Fix: solved - centimeter, the green dot. Stuck in Float = sky view, distance, or correction format.</p></div>
+      <div class="card"><h4>The ~10 km rule</h4><p>Base and rover must share the same slice of atmosphere. Past ~10 km performance degrades; past ~35 km, Float is expected behavior.</p></div>
+      <div class="card"><h4>CORS ≠ a live service</h4><p>CORS is the national skeleton of permanent stations. It mainly feeds post-processing (OPUS). Real-time networks are separate services layered on the same idea.</p></div>
+      <div class="card"><h4>Precision ≠ accuracy</h4><p>A base on a guessed (Survey-In) position gives beautifully precise measurements of the wrong place. Permanent installs always use Fixed Base with true coordinates.</p></div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <span>PNT Lab - RTK Atlas. A personal study project, not an official SparkPNT site.</span>
+  <span>Sources: <a href="https://e38surveysolutions.com/pages/ntrip-rtk-network-access-by-state" target="_blank" rel="noopener">E38 state list</a> · <a href="https://geodesy.noaa.gov/OPUS/" target="_blank" rel="noopener">NOAA OPUS</a> · <a href="https://www.u-blox.com/en/product/pointperfect" target="_blank" rel="noopener">PointPerfect</a></span>
+</footer>
+
+<script src="../assets/vendor/leaflet.js?v=1788198246"></script>
+<script src="../assets/world.js?v=1788210532"></script>
+<script src="us-states.js?v=1786651203"></script>
+<script src="cors.js?v=1788211672"></script>
+<script src="bases.js?v=1788213283"></script>
+<script src="admin1/index.js?v=1788213173"></script>
+<script src="data.js?v=1788453404"></script>
+<script src="app.js?v=1788452975"></script>
+</body>
+</html>

@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Product Guide - PNT Lab</title>
+<link rel="stylesheet" href="../assets/style.css?v=1786981062">
+<style>
+  main { max-width: 1150px; margin: 0 auto; padding: 0 var(--page-pad) 3rem; }
+
+  /* Audience toggle */
+  .mode-toggle { display: inline-flex; background: rgba(51,51,51,.06); border-radius: 999px; padding: .3rem; gap: .2rem; }
+  .mode-toggle button { border: none; background: transparent; font-family: var(--font-body); font-weight: 500; font-size: .95rem; padding: .55rem 1.4rem; border-radius: 999px; cursor: pointer; color: var(--text); transition: all .3s cubic-bezier(.7,0,.3,1); }
+  .mode-toggle button.active { background: var(--heading); color: #fff; }
+  .mode-hint { font-size: .85rem; color: #999; margin-top: .5rem; }
+  body.mode-field .pro-only { display: none !important; }
+  body.mode-pro .field-only { display: none !important; }
+
+  /* Product search */
+  .psearch { position: relative; max-width: 520px; margin-top: 1.4rem; }
+  .psearch input { width: 100%; border: none; background: rgba(23,23,23,.045); border-radius: 999px; padding: 1rem 1.4rem; font-family: var(--font-body); font-size: 1rem; color: var(--heading); outline: 2px solid transparent; }
+  .psearch input:focus { outline-color: rgb(11 97 205); background: #fff; box-shadow: var(--shadow); }
+  .psearch .results { position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: #fff; border-radius: 1rem; box-shadow: 0 12px 40px rgba(0,0,0,.16); z-index: 40; overflow: hidden; display: none; }
+  .psearch .results.on { display: block; }
+  .psearch .res { display: flex; align-items: baseline; gap: .7rem; padding: .7rem 1.2rem; cursor: pointer; font-size: .95rem; }
+  .psearch .res .nm { font-weight: 700; color: var(--heading); }
+  .psearch .res .pr { color: var(--price-blue); font-weight: 500; font-size: .85rem; }
+  .psearch .res .tg { color: #999; font-size: .78rem; margin-left: auto; }
+  .psearch .res:hover, .psearch .res.sel { background: var(--highlight); }
+  .psearch .kbd-hint { font-size: .75rem; color: #bbb; margin-top: .35rem; }
+  @keyframes flashcard { 0% { box-shadow: 0 0 0 3px var(--accent); } 100% { box-shadow: var(--shadow); } }
+  .flash { animation: flashcard 1.6s ease-out 1; }
+
+  /* Panel navigation - the spine of the page */
+  .panel-nav { position: sticky; top: 64px; z-index: 30; background: rgba(255,255,255,.96); backdrop-filter: blur(8px); padding: .7rem 0; margin-bottom: 1.6rem; border-bottom: 1px solid var(--border); display: flex; gap: .45rem; flex-wrap: wrap; align-items: center; }
+  .pn-btn { border: 2px solid transparent; background: rgba(51,51,51,.05); border-radius: 999px; padding: .5rem 1.15rem; font-family: var(--font-body); font-weight: 500; font-size: .9rem; cursor: pointer; color: var(--text); transition: all .2s; }
+  .pn-btn:hover { background: var(--highlight); color: var(--heading); }
+  .pn-btn.sel { background: var(--accent); color: #fff; }
+  .pn-step { font-size: .72rem; color: #bbb; font-weight: 700; margin: 0 .1rem; }
+  .panel { display: none; }
+  .panel.show { display: block; animation: panelin .25s ease-out; }
+  @keyframes panelin { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  /* Wizard */
+  .wizard { background: var(--highlight); border-radius: var(--card-radius); padding: clamp(1.5rem, 3.5vw, 2.5rem); }
+  .wizard h2 { margin-bottom: .3rem; }
+  .wizard .step { margin-top: 1.2rem; }
+  .wizard .q { font-weight: 700; color: var(--heading); margin-bottom: .6rem; }
+  .wizard .opts { display: flex; gap: .6rem; flex-wrap: wrap; }
+  .wizard .opts button { border: 2px solid var(--heading); background: #fff; border-radius: 999px; padding: .55rem 1.2rem; font-family: var(--font-body); font-weight: 500; font-size: .9rem; cursor: pointer; transition: all .2s; }
+  .wizard .opts button:hover, .wizard .opts button.sel { background: var(--heading); color: #fff; }
+  .wizard .reco { background: #fff; border-radius: .8rem; padding: 1.2rem 1.4rem; margin-top: 1.4rem; display: none; }
+  .wizard .reco.on { display: block; }
+  .wizard .reco h3 { color: var(--accent); margin-bottom: .4rem; }
+  .wizard .restart { margin-top: .8rem; }
+  .next-cue { margin-top: 1.2rem; font-size: .9rem; }
+  .next-cue button { border: none; background: none; color: var(--price-blue); font-family: var(--font-body); font-size: .9rem; cursor: pointer; text-decoration: underline; padding: 0; }
+
+  /* Product cards */
+  .prod-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 1.4rem; margin: 1.5rem 0 1rem; }
+  .prod-card { display: flex; flex-direction: column; gap: .5rem; }
+  .prod-card .pimg { width: 100%; height: 170px; object-fit: contain; border-radius: .7rem; background: #FAFAFA; }
+  .prod-card .price { font-family: var(--font-heading); font-weight: 600; font-size: 1.3rem; color: var(--price-blue); }
+  .prod-card .price .tilt { font-size: .85rem; font-weight: 500; color: #999; }
+  .prod-card h3 { font-size: 1.4rem; }
+  .prod-card p { font-size: .92rem; }
+  .best-for { background: var(--success-bg); color: var(--success-text); border-radius: .6rem; padding: .6rem .9rem; font-size: .85rem; font-weight: 500; }
+  .buy-row { display: flex; gap: .6rem; align-items: center; margin-top: .3rem; }
+  .buy-row a.store { font-size: .82rem; }
+
+  /* Spec tables */
+  .table-scroll { overflow-x: auto; border-radius: var(--card-radius); box-shadow: var(--shadow); margin: 1.5rem 0 .4rem; }
+  .scroll-hint { font-size: .75rem; color: #bbb; margin-bottom: 1.5rem; }
+  table.specs { border-collapse: collapse; width: 100%; min-width: 820px; background: #fff; font-size: .88rem; }
+  .specs th, .specs td { padding: .7rem .9rem; text-align: left; border-bottom: 1px solid var(--border); }
+  .specs thead th { font-family: var(--font-heading); font-weight: 600; color: var(--heading); background: rgba(51,51,51,.03); position: sticky; top: 0; }
+  .specs tbody th { font-weight: 500; color: var(--heading); white-space: nowrap; }
+  .specs td.yes { color: var(--success-text); font-weight: 700; }
+  .specs td.no { color: #bbb; }
+  .specs td .sub { display: block; font-size: .75rem; color: #999; }
+
+  section.block { margin: 0 0 2.2rem; }
+  section.block > h2 { font-size: clamp(1.4rem, 2.5vw, 1.9rem); margin-bottom: .4rem; }
+  section.block > .sub { color: #777; margin-bottom: 1.2rem; }
+
+  .competitor { border-left: 4px solid var(--highlight); padding: .2rem 0 .2rem 1.1rem; margin-bottom: 1.1rem; }
+  .competitor h3 { font-size: 1.05rem; margin-bottom: .2rem; }
+  .competitor p { font-size: .92rem; }
+
+  .pitch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; }
+  .pitch-grid .card h4 { color: var(--accent); margin-bottom: .35rem; }
+  .pitch-grid .card p { font-size: .88rem; }
+
+  .callout { background: var(--info-bg); border-radius: var(--card-radius); padding: 1.2rem 1.5rem; font-size: .92rem; color: var(--text); margin: 1.5rem 0; }
+  .callout strong { color: var(--info-text); }
+  .stamp { display: inline-block; font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; background: var(--success-bg); color: var(--success-text); border-radius: 999px; padding: .25rem .8rem; }
+
+  /* Visual viewer station */
+  .station { background: #fff; border-radius: var(--card-radius); box-shadow: var(--shadow); padding: clamp(1rem, 2vw, 1.5rem); }
+  .st-row { display: flex; gap: .45rem; flex-wrap: wrap; }
+  .st-rowwrap { display: flex; gap: .6rem; align-items: flex-start; margin-bottom: .7rem; }
+  .st-label { flex-shrink: 0; font-size: .66rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #aaa; padding-top: .55rem; width: 86px; text-align: right; }
+  .st-label b { color: var(--accent); }
+  .st-tray { display: flex; gap: .6rem; align-items: flex-start; background: rgba(224,49,29,.05); border-left: 3px solid var(--accent); border-radius: .7rem; padding: .55rem .7rem .55rem .6rem; margin: 0 0 .8rem 1.2rem; }
+  .st-tray .st-label { padding-top: .42rem; }
+  .st-row.items .stbtn { font-size: .78rem; padding: .3rem .8rem; border-width: 1.5px; }
+  .stbtn.sel .caret { display: inline-block; margin-left: .35rem; font-size: .62rem; }
+  .stbtn { border: 2px solid var(--border); background: #fff; border-radius: 999px; padding: .38rem .95rem; font-family: var(--font-body); font-weight: 500; font-size: .84rem; cursor: pointer; color: var(--text); transition: all .2s; }
+  .stbtn:hover { border-color: var(--heading); }
+  .stbtn.sel { background: var(--heading); border-color: var(--heading); color: #fff; }
+  .st-row.items .stbtn.sel { background: var(--accent); border-color: var(--accent); }
+  #st-frame { width: 100%; height: 600px; border: none; border-radius: .8rem; background: #FAFAFA; }
+  .swap-embed { margin-top: 1.2rem; border: 1px solid #ECECEC; border-radius: .8rem; overflow: hidden; }
+  #swap-inline { display: block; width: 100%; height: 520px; border: none; background: #FAFAFA; }
+  .st-foot { display: flex; justify-content: space-between; align-items: center; font-size: .8rem; margin-top: .5rem; }
+  .st-foot a { color: var(--price-blue); }
+
+  /* see-it-live buttons + modal */
+  .see-live { border: none; background: var(--highlight); color: var(--heading); font-family: var(--font-body); font-size: .68rem; font-weight: 700; border-radius: 999px; padding: .18rem .55rem; cursor: pointer; margin-left: .4rem; white-space: nowrap; }
+  .see-live:hover { background: var(--accent); color: #fff; }
+  .vmodal { position: fixed; inset: 0; background: rgba(23,23,23,.55); display: none; align-items: center; justify-content: center; z-index: 200; padding: 1rem; }
+  .vmodal.on { display: flex; }
+  .vmodal .box { background: #fff; border-radius: var(--card-radius); width: min(880px, 96vw); box-shadow: 0 20px 60px rgba(0,0,0,.3); overflow: hidden; }
+  .vmodal .bar { display: flex; justify-content: flex-end; padding: .4rem .6rem; }
+  .vmodal .bar button { border: none; background: none; font-size: 1.1rem; cursor: pointer; color: #777; font-family: var(--font-body); }
+  .vmodal iframe { width: 100%; height: min(620px, 78vh); border: none; }
+  .card-ic { width: 30px; height: 30px; margin-bottom: .45rem; display: block; }
+  .pos-chart { background: #fff; border-radius: var(--card-radius); box-shadow: var(--shadow); padding: 1rem 1.2rem 0.4rem; margin-bottom: 1.5rem; }
+  .pos-note { font-size: .74rem; color: #aaa; padding: 0 .2rem .8rem; }
+</style>
+<!-- PNT Lab public build 2026-10-22. Client tracker and outreach research are not part of this site. -->
+</head>
+<body class="mode-field">
+
+<header class="site-header">
+  <a class="brand" href="../index.html"><span class="spark">⌖</span> PNT Lab</a>
+  <nav class="site-nav">
+    <a href="../index.html">Home</a>
+    <a href="../study/index.html">Study Tracker</a>
+    <a href="index.html" class="active">Product Guide</a>
+    <a href="../lab/index.html">Visual Lab</a>
+    <a href="../atlas/index.html">RTK Atlas</a>
+    <a href="../program/index.html">Trial &amp; Corps</a>
+    <a href="../support/index.html">Device Support</a>
+  </nav>
+</header>
+
+<main>
+  <section class="hero" style="padding-left:0;padding-right:0;padding-bottom:1rem;">
+    <div class="kicker">The SparkPNT lineup</div>
+    <h1>One lineup, explained twice.</h1>
+    <p><strong>Field view</strong> answers "which one do I need?" in plain language, step by step. <strong>Pro view</strong> has every spec, engine, and the competition. Use the sections bar to move around - nothing here needs scrolling hunts.</p>
+
+    <div class="psearch">
+      <input type="text" id="psearch" placeholder="Jump to anything: TX2, FPM-T, SXT, base station, tilt…" autocomplete="off">
+      <div class="results" id="psearch-results"></div>
+      <div class="kbd-hint">Press / to search · arrows + Enter to jump</div>
+    </div>
+
+    <div style="margin-top:1.3rem">
+      <div class="mode-toggle">
+        <button id="btn-field" class="active">🧭 Field view</button>
+        <button id="btn-pro">🛠 Pro view</button>
+      </div>
+      <div class="mode-hint field-only">Short answers, store prices, no jargon.</div>
+      <div class="mode-hint pro-only">Full specs, engines, and competitive context.</div>
+      <div style="margin-top:.6rem"><span class="stamp">Prices verified against the live store · Aug 14, 2026</span></div>
+    </div>
+  </section>
+
+  <!-- ============ SECTION TABS ============ -->
+  <nav class="panel-nav" id="panel-nav"></nav>
+
+  <!-- ================= FIELD PANELS ================= -->
+  <div class="field-only">
+
+    <!-- Field 1: choose -->
+    <section class="panel" data-panel="choose">
+      <div class="wizard">
+        <h2>Help me choose.</h2>
+        <p>Three quick questions - the same ones we'd ask you on a call.</p>
+        <div class="step" id="w-q1">
+          <div class="q">1 · Where will you work - is there cell phone coverage at your sites?</div>
+          <div class="opts">
+            <button data-q="1" data-v="cell">Usually have cell service</button>
+            <button data-q="1" data-v="nocell">Often no cell service</button>
+          </div>
+        </div>
+        <div class="step" id="w-q2" style="display:none">
+          <div class="q">2 · How accurate do you actually need to be?</div>
+          <div class="opts">
+            <button data-q="2" data-v="foot">Within a foot or two is fine</button>
+            <button data-q="2" data-v="cm">A few centimeters</button>
+            <button data-q="2" data-v="survey">Survey-grade, legally defensible</button>
+          </div>
+        </div>
+        <div class="step" id="w-q3" style="display:none">
+          <div class="q">3 · Anything special about the work?</div>
+          <div class="opts">
+            <button data-q="3" data-v="none">Just collecting points</button>
+            <button data-q="3" data-v="pole">Long days on a pole (tilt helps)</button>
+            <button data-q="3" data-v="drone">Drones / robots / autonomous gear</button>
+          </div>
+        </div>
+        <div class="step" id="w-q4" style="display:none">
+          <div class="q">4 · For your platform, what matters more? (Both options are spoofing-protected.)</div>
+          <div class="opts">
+            <button data-q="4" data-v="endurance">Long endurance &amp; low power - mapping flights, remote deployments</button>
+            <button data-q="4" data-v="dynamics">Fast reactions &amp; harsh radio environments - or survey-grade PPK deliverables</button>
+          </div>
+        </div>
+        <div class="reco" id="w-reco"></div>
+      </div>
+      <div class="next-cue">Next: <button data-goto="products">the products →</button></div>
+    </section>
+
+    <!-- Field 2: products -->
+    <section class="panel" data-panel="products">
+      <section class="block">
+        <h2>The products</h2>
+        <div class="sub">Every unit gets centimeter-capable with a corrections source - free in many states, or $15/month anywhere with cell service.</div>
+        <div class="prod-grid">
+          <div class="card prod-card" id="p-tx2">
+            <img class="pimg" loading="lazy" alt="TX2 handheld GNSS receiver" src="https://cdn.shopify.com/s/files/1/1004/5633/3606/files/29524-RTK-Torch-X2-Front.jpg?v=1772556136" onerror="this.style.display='none'">
+            <span class="tag tag-accent">Most popular</span>
+            <h3>TX2</h3>
+            <div class="price">$1,250</div>
+            <p>Handheld receiver. One charge covers a week of field days, it connects to iPhone and iPad (Apple-certified Bluetooth), and it gets better than 20 cm accuracy anywhere for free - no subscription, no internet.</p>
+            <div class="best-for">Best for: GIS mapping, asset inventory, anyone starting out</div>
+            <div class="buy-row"><a class="store" href="https://www.sparkpnt.com/products/sparkpnt-tx2" target="_blank" rel="noopener">See it on sparkpnt.com ↗</a><button class="see-live" data-w="w-radio">▶ base &amp; rover demo</button></div>
+          </div>
+          <div class="card prod-card" id="p-fpl">
+            <img class="pimg" loading="lazy" alt="Facet FP receiver" src="https://cdn.shopify.com/s/files/1/1004/5633/3606/files/SparkPNT-FP-Front-Screen.jpg?v=1773348029" onerror="this.style.display='none'">
+            <h3>Facet FPL</h3>
+            <div class="price">$1,550 <span class="tilt">· with tilt $1,700</span></div>
+            <p>Same GNSS engine as the TX2, in a larger body with a long-range radio that sends corrections to a second unit kilometers away, no internet needed. Two of these make a self-contained centimeter setup for a farm or remote site.</p>
+            <div class="best-for">Best for: budget RTK, farms &amp; sites with no cell service</div>
+            <div class="buy-row"><a class="store" href="https://www.sparkpnt.com/products/sparkpnt-fp" target="_blank" rel="noopener">See it on sparkpnt.com ↗</a><button class="see-live" data-w="w-bat">▶ battery race</button></div>
+          </div>
+          <div class="card prod-card" id="p-fpx">
+            <img class="pimg" loading="lazy" alt="Facet FP receiver" src="https://cdn.shopify.com/s/files/1/1004/5633/3606/files/SparkPNT-FP-Front-Screen.jpg?v=1773348029" onerror="this.style.display='none'">
+            <h3>Facet FPX</h3>
+            <div class="price">$1,650 <span class="tilt">· with tilt $1,800</span></div>
+            <p>Longest battery and lowest power draw in the Facet family, and built-in support for the $15/month corrections service. Includes spoofing protection, same as the FPM.</p>
+            <div class="best-for">Best for: drones, long deployments, OEM integrations</div>
+            <div class="buy-row"><a class="store" href="https://www.sparkpnt.com/products/sparkpnt-fp" target="_blank" rel="noopener">See it on sparkpnt.com ↗</a><button class="see-live" data-w="w-hz">▶ update rate</button></div>
+          </div>
+          <div class="card prod-card" id="p-fpm">
+            <img class="pimg" loading="lazy" alt="Facet FP receiver" src="https://cdn.shopify.com/s/files/1/1004/5633/3606/files/SparkPNT-FP-Front-Screen.jpg?v=1773348029" onerror="this.style.display='none'">
+            <h3>Facet FPM</h3>
+            <div class="price">$1,950 <span class="tilt">· with tilt $2,100</span></div>
+            <p>The most precise engine in the lineup. It logs RINEX, the format government post-processing tools take, and it actively suppresses radio interference rather than just detecting it. Includes spoofing protection, same as the FPX.</p>
+            <div class="best-for">Best for: licensed surveyors, boundary &amp; control work, harsh RF sites</div>
+            <div class="buy-row"><a class="store" href="https://www.sparkpnt.com/products/sparkpnt-fp" target="_blank" rel="noopener">See it on sparkpnt.com ↗</a><button class="see-live" data-w="w-tilt">▶ tilt demo</button></div>
+          </div>
+          <div class="card prod-card" id="p-sxme">
+            <img class="pimg" loading="lazy" alt="SXM-E reference station kit" src="https://cdn.shopify.com/s/files/1/1004/5633/3606/files/SparkPNT-SXM-E-Kit-Feature.jpg?v=1781292698" onerror="this.style.display='none'">
+            <h3>SXM-E Reference Station</h3>
+            <div class="price">$1,250 kit <span class="tilt">· $1,100 device only</span></div>
+            <p>A permanent base station for a rooftop, a farm, or a whole district. Set it once and every rover nearby gets corrections from it around the clock.</p>
+            <div class="best-for">Best for: permanent installs, districts, campuses</div>
+            <div class="buy-row"><a class="store" href="https://www.sparkpnt.com/products/sparkpnt-sxm-e-cors" target="_blank" rel="noopener">See it on sparkpnt.com ↗</a><button class="see-live" data-w="w-sxme">▶ cost math</button></div>
+          </div>
+          <div class="card prod-card" id="p-sxt">
+            <img class="pimg" loading="lazy" alt="SXT GNSS disciplined oscillator" src="https://cdn.shopify.com/s/files/1/1004/5633/3606/files/26289-GNSS-Disciplined-Oscillator-Front-Lit_56697a68-b6f3-45b4-bd70-bbcb342388ad.jpg?v=1774386960" onerror="this.style.display='none'">
+            <h3>SXT · SXT-D Timing</h3>
+            <div class="price">$2,500 <span class="tilt">· SXT-D $3,500</span></div>
+            <p>GNSS-disciplined clocks for data centers, broadcast, and labs. The SXT-D adds a double-oven oscillator for tighter holdover. This is timing, not mapping - contact us to spec one.</p>
+            <div class="best-for">Best for: timing, synchronization, research labs</div>
+            <div class="buy-row"><a class="store" href="https://www.sparkpnt.com/products/sxt-gnssdo" target="_blank" rel="noopener">See it on sparkpnt.com ↗</a><button class="see-live" data-w="w-holdover">▶ holdover demo</button></div>
+          </div>
+        </div>
+        <div class="callout"><strong>Accuracy in practice:</strong> out of the box, about 30 cm. Free satellite corrections (TX2 &amp; FPL): about 20 cm anywhere. With a corrections source - free in many states, $15/month otherwise, or your own base - 1 to 6 cm. Most mapping jobs need 10 cm to 1 m, so don't buy more accuracy than the job asks for.</div>
+      </section>
+      <div class="next-cue">Next: <button data-goto="repair">warranty &amp; support →</button></div>
+    </section>
+
+    <!-- Field 3: repair -->
+    <section class="panel" data-panel="repair">
+      <section class="block" id="p-repair">
+        <h2>What stands behind the hardware</h2>
+        <div class="sub">Warranty, real engineering help, and the one device in the family built to be upgraded.</div>
+        <div class="pitch-grid">
+          <div class="card"><h4>One-year warranty</h4><p>Every unit carries a one-year warranty, and on the Facet FP, swapping the GNSS engine module yourself does not void it. Older generations (Facet, Express, Surveyor, Torch) are still supported for repairs.</p></div>
+          <div class="card"><h4>Talk to the people who built it</h4><p>The firmware is open source, the schematics are published, and the docs and community forum are public. When a problem needs engineering, support brings in the engineers who wrote the firmware - your question does not stop at a ticket wall.</p></div>
+          <div class="card"><h4>The FP grows with you</h4><p>The Facet FP is the upgradeable one: its GNSS engine is a module you swap with a screwdriver. Start with the FPL engine and move up to FPX or FPM later, or into a future generation, without buying a new device. Try it below.</p></div>
+        </div>
+        <div class="swap-embed">
+          <iframe id="swap-inline" src="../lab/index.html?embed=1&amp;w=w-swap" title="FP engine swap - interactive visual" loading="lazy"></iframe>
+        </div>
+      </section>
+      <div class="next-cue">Next: <button data-goto="visuals">play with the visuals →</button></div>
+    </section>
+  </div>
+
+  <!-- ================= PRO PANELS ================= -->
+  <div class="pro-only">
+
+    <!-- Pro 1: specs -->
+    <section class="panel" data-panel="specs">
+      <section class="block" id="p-specs">
+        <h2>Full specification matrix</h2>
+        <div class="sub">Prices pulled from the live store, August 14, 2026. -T = built-in tilt compensation. The ▶ buttons open the matching visual.</div>
+        <div class="table-scroll">
+          <table class="specs">
+            <thead>
+              <tr><th>Spec</th><th>TX2</th><th>FPL</th><th>FPX</th><th>FPM</th></tr>
+            </thead>
+            <tbody>
+              <tr><th>Price</th><td>$1,250</td><td>$1,550</td><td>$1,650</td><td>$1,950</td></tr>
+              <tr><th>Price with tilt (-T) <button class="see-live" data-w="w-tilt">▶ see it</button></th><td class="no">-</td><td>$1,700</td><td>$1,800</td><td>$2,100</td></tr>
+              <tr><th>GNSS engine</th><td>Quectel LG290P</td><td>Quectel LG290P</td><td>u-blox ZED-X20P</td><td>Septentrio mosaic-X5</td></tr>
+              <tr><th>Bands</th><td>Quad (L1/L2/L5/E6)</td><td>Quad (L1/L2/L5/E6)</td><td>All-band<span class="sub">L-Band capable hardware</span></td><td>All-band<span class="sub">sub-cm class</span></td></tr>
+              <tr><th>RTK accuracy <button class="see-live" data-w="w-ppm">▶ see it</button></th><td>8 mm class</td><td>cm class</td><td>cm class</td><td>sub-cm class</td></tr>
+              <tr><th>Battery <button class="see-live" data-w="w-bat">▶ see it</button></th><td>50+ hr</td><td>48 hr</td><td>54 hr<span class="sub">longest in family</span></td><td>32 hr</td></tr>
+              <tr><th>Galileo HAS</th><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Chip-capable<span class="sub">per X20P datasheet - verify product support</span></td><td class="no">No - mosaic-X5 lacks HAS</td></tr>
+              <tr><th>OSNMA anti-spoofing <button class="see-live" data-w="w-sky">▶ see it</button></th><td class="no">-</td><td class="no">-</td><td class="yes">Yes + secure boot &amp; storage</td><td class="yes">Yes + AIM+ mitigation</td></tr>
+              <tr><th>Anti-jamming</th><td>-</td><td>-</td><td>Detection &amp; reporting<span class="sub">spectrum analyzer</span></td><td class="yes">AIM+ active mitigation<span class="sub">fights jammers, not just reports</span></td></tr>
+              <tr><th>Max update rate <button class="see-live" data-w="w-hz">▶ see it</button></th><td>10 Hz class</td><td>10 Hz class</td><td>25 Hz</td><td class="yes">100 Hz, &lt;10 ms delay</td></tr>
+              <tr><th>Native RINEX logging</th><td class="no">-</td><td class="no">-</td><td class="no">- (RAWX, needs conversion)</td><td class="yes">Yes - cleanest OPUS path</td></tr>
+              <tr><th>Base capability <button class="see-live" data-w="w-radio">▶ see it</button></th><td class="yes">Yes - ESP-NOW<span class="sub">2.4 GHz, ~250 m LOS</span></td><td class="yes">Yes - LoRa<span class="sub">km+ range</span></td><td class="yes">Yes - LoRa</td><td class="yes">Yes - LoRa</td></tr>
+              <tr><th>Swappable engine (Flex) <button class="see-live" data-w="w-swap">▶ see it</button></th><td class="no">-</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+              <tr><th>MFi certified (iOS) <button class="see-live" data-w="w-apps">▶ see it</button></th><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+              <tr><th>Housing <button class="see-live" data-w="w-ip67">▶ see it</button></th><td>IP67, 428 g<span class="sub">internal helical antenna</span></td><td>IP67 die-cast magnesium alloy</td><td>IP67 die-cast magnesium alloy</td><td>IP67 die-cast magnesium alloy</td></tr>
+              <tr><th>Steer toward</th><td>GIS / iOS / volume</td><td>Value RTK, ag, base pairs</td><td>Endurance, OEM, PointPerfect-native, L-Band-ready</td><td>Surveyors, OPUS, 100 Hz control, harsh RF</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="scroll-hint">Table scrolls sideways on small screens →</div>
+        <div class="callout"><strong>Memory hook (revised Aug 2026):</strong> L is for low cost, X is for eXtended endurance &amp; ecosystem, M is for measurement professionals. <strong>Both X and M carry OSNMA anti-spoofing - security no longer separates them.</strong> What does: update rate &amp; jamming protection (FPM) vs battery &amp; PointPerfect-native integration (FPX). Full spec-by-spec comparison in the <a href="engines.html">Engine Deep Dive</a>. The FPX's L-Band-capable hardware ≠ an active L-Band service in North America today.</div>
+      </section>
+      <div class="next-cue">Next: <button data-goto="timing">the timing &amp; reference line →</button></div>
+    </section>
+
+    <!-- Pro 2: timing -->
+    <section class="panel" data-panel="timing">
+      <section class="block" id="p-timing">
+        <h2>Reference &amp; timing line</h2>
+        <div class="sub">A different world from mapping: these sell clocks, not coordinates. Our engineering team handles these conversations directly.</div>
+        <div class="table-scroll">
+          <table class="specs">
+            <thead><tr><th>Spec</th><th>SXM-E</th><th>SXT</th><th>SXT-D</th></tr></thead>
+            <tbody>
+              <tr><th>Price</th><td>$1,250 full kit / $1,100 device</td><td>$2,500</td><td>$3,500</td></tr>
+              <tr><th>What it is <button class="see-live" data-w="w-sxme">▶ see it</button></th><td>Permanent reference station (CORS-style)</td><td>GNSS disciplined oscillator</td><td>GNSSDO with double-oven OCXO</td></tr>
+              <tr><th>Engine</th><td>mosaic-X5 based</td><td>mosaic-T based</td><td>mosaic-T based</td></tr>
+              <tr><th>Who buys it <button class="see-live" data-w="w-holdover">▶ see it</button></th><td>Districts, campuses, ag co-ops, anyone feeding many rovers</td><td>Data centers, broadcast, labs</td><td>Labs and research programs with strict holdover needs</td></tr>
+              <tr><th>Corrections / services <button class="see-live" data-w="w-pps">▶ see it</button></th><td>Feeds NTRIP to any rover</td><td colspan="2">Fugro AtomiChron L-band timing service</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="scroll-hint">Table scrolls sideways on small screens →</div>
+      </section>
+      <div class="next-cue">Next: <button data-goto="support">support-critical notes →</button></div>
+    </section>
+
+    <!-- Pro 3: support -->
+    <section class="panel" data-panel="support">
+      <section class="block">
+        <h2>Good to know before you call</h2>
+        <div class="sub">The six facts that solve most support conversations before they start.</div>
+        <div class="pitch-grid">
+          <div class="card"><svg class="card-ic" viewBox="0 0 30 30"><path d="M4 22 q11 -14 22 0" fill="none" stroke="#E0311D" stroke-width="2"/><path d="M8 22 q7 -8 14 0" fill="none" stroke="#E0311D" stroke-width="2" opacity=".55"/><circle cx="15" cy="22" r="2.6" fill="#171717"/></svg><h4>Correction format matters</h4><p>The TX2 and FPL accept modern MSM correction messages (MSM3 to MSM7, per the Quectel LG290P protocol spec). Older legacy message types (RTCM 1001-1012) are not supported and quietly do nothing. If a unit will not lock on a source, check the message format first; a factory reset clears leftover settings.</p></div>
+          <div class="card"><svg class="card-ic" viewBox="0 0 30 30"><rect x="4" y="5" width="9" height="9" rx="2" fill="none" stroke="#E0311D" stroke-width="2"/><rect x="17" y="16" width="9" height="9" rx="2" fill="none" stroke="#171717" stroke-width="2"/><path d="M13 9.5 h6 v6" fill="none" stroke="#999" stroke-width="1.8"/></svg><h4>Two firmware generations</h4><p>Older units run per-model firmware with differing menus. Everything current runs RTK Everywhere: one codebase, the same menus on every product, any correction source. First question on any call: "which firmware are you on?"</p></div>
+          <div class="card"><svg class="card-ic" viewBox="0 0 30 30"><rect x="4" y="9" width="10" height="16" rx="2.5" fill="none" stroke="#171717" stroke-width="2"/><path d="M18 12 q7 0 7 7" fill="none" stroke="#E0311D" stroke-width="2"/><path d="M18 17 q3.5 0 3.5 3.5" fill="none" stroke="#E0311D" stroke-width="2" opacity=".55"/></svg><h4>Two connection paths <button class="see-live" data-w="w-ghost">▶ see it</button></h4><p>Corrections can come through your phone app or through the device's own WiFi - run one, not both. The device's corrections-sources screen always shows who is really delivering.</p></div>
+          <div class="card"><svg class="card-ic" viewBox="0 0 30 30"><rect x="11" y="4" width="8" height="6" rx="1.5" fill="none" stroke="#171717" stroke-width="2"/><line x1="7" y1="7" x2="11" y2="7" stroke="#171717" stroke-width="2"/><line x1="19" y1="7" x2="23" y2="7" stroke="#171717" stroke-width="2"/><path d="M11 14 q4 5 8 0" fill="none" stroke="#E0311D" stroke-width="2"/><line x1="15" y1="17" x2="15" y2="25" stroke="#E0311D" stroke-width="2" stroke-dasharray="2.5 2.5"/></svg><h4>The L-Band change</h4><p>The North American satellite-delivered service ended December 31, 2025. Facet L-Band units still work fully as receivers - they now use internet corrections instead. A global replacement is announced without a date, so we do not promise one.</p></div>
+          <div class="card"><svg class="card-ic" viewBox="0 0 30 30"><path d="M15 4 l9 3.5 v7 q0 8 -9 11.5 q-9 -3.5 -9 -11.5 v-7 z" fill="none" stroke="#171717" stroke-width="2"/><path d="M10.5 15 l3.2 3.2 l6 -6" fill="none" stroke="#E0311D" stroke-width="2.2"/></svg><h4>Warranty &amp; repairs</h4><p>One year, and swapping FP engine modules does not void it. Zero Downtime Protection ($600-$1,000) ships a replacement before the repair even starts.</p></div>
+          <div class="card"><svg class="card-ic" viewBox="0 0 30 30"><circle cx="15" cy="15" r="10.5" fill="none" stroke="#171717" stroke-width="2"/><path d="M15 9 v6 l4.5 3" fill="none" stroke="#E0311D" stroke-width="2.2"/></svg><h4>The timing line</h4><p>The SXT and SXT-D are precision clocks, not mapping tools - a different vocabulary (pulse-per-second, holdover). Our engineering team handles these conversations directly.</p></div>
+        </div>
+        <div class="callout" style="margin-top:1.5rem"><strong>Older products:</strong> Facet, Facet L-Band, Express, Surveyor, and Torch are all still supported for repairs. Facet L-Band owners: your unit works fully with internet corrections (see "The L-Band change" above). Surveyor and Express predate our Apple certification, so iPhone serial connections are honestly not supported on those two generations.</div>
+      </section>
+      <div class="next-cue">Next: <button data-goto="competition">how we stack up →</button></div>
+    </section>
+
+    <!-- Pro 4: competition -->
+    <section class="panel" data-panel="competition">
+      <section class="block">
+        <h2>How we compare</h2>
+        <div class="sub">There are excellent instruments across this industry. Here is where each name is strong, and where we choose to be different: open firmware, repairable hardware, and honest total cost.</div>
+        <div class="pos-chart">
+          <svg width="100%" viewBox="0 0 640 300">
+            <line x1="60" y1="250" x2="610" y2="250" stroke="#c9d6c9" stroke-width="2"/>
+            <line x1="60" y1="250" x2="60" y2="20" stroke="#c9d6c9" stroke-width="2"/>
+            <text x="335" y="280" font-size="12" fill="#888" text-anchor="middle">price of a complete setup &#8594;</text>
+            <text x="30" y="135" font-size="12" fill="#888" text-anchor="middle" transform="rotate(-90 30 135)">freedom to repair &amp; choose &#8594;</text>
+            <circle cx="150" cy="55" r="11" fill="#E0311D"/>
+            <text x="150" y="38" font-size="13" font-weight="700" fill="#171717" text-anchor="middle">SparkPNT</text>
+            <circle cx="215" cy="115" r="9" fill="#108474"/>
+            <text x="215" y="98" font-size="12" fill="#444" text-anchor="middle">Emlid</text>
+            <circle cx="500" cy="185" r="9" fill="#B45309"/>
+            <text x="500" y="168" font-size="12" fill="#444" text-anchor="middle">Topcon</text>
+            <circle cx="555" cy="205" r="9" fill="#0F4269"/>
+            <text x="555" y="188" font-size="12" fill="#444" text-anchor="middle">Trimble</text>
+          </svg>
+          <div class="pos-note">Our view, simplified: positions reflect public pricing and published repair policies, not performance. Once any of these has an RTK lock, the physics is the same - about 1 cm.</div>
+        </div>
+        <div class="competitor">
+          <h3>Trimble</h3>
+          <p>Mature, deeply featured, tightly integrated with their own corrections (RTX, global SSR). Integrated systems commonly run $10,000–$20,000+, with subscriptions stacking on top. Their premium buys robustness at the edges (canopy, fix speed in ugly conditions, ecosystem) - not a smaller number. Same physics: an RTK fix is ~1 cm regardless of logo.</p>
+        </div>
+        <div class="competitor">
+          <h3>Topcon</h3>
+          <p>Same tier as Trimble, own corrections network (Topnet Live). Note: the "PointPerfect Live is a Topcon resell" theory is unverified - do not repeat to customers.</p>
+        </div>
+        <div class="competitor">
+          <h3>Emlid</h3>
+          <p>Affordable, approachable, unified firmware across the Reach line. But: Reach RX is rover-only (TX2 does base + rover), and their base-capable units cost enough to erase the price advantage. Differentiators vs Emlid: open-source firmware you can audit, right-to-repair with published schematics, swappable engine on FP, MFi, NGS-calibrated antennas.</p>
+        </div>
+        <div class="competitor">
+          <h3>u-blox, Septentrio, Quectel - our suppliers, not rivals</h3>
+          <p>They make the engines inside everyone's gear, including ours. The pitch: the same premium engines in approachable, repairable, open-firmware units at a fraction of Trimble money.</p>
+        </div>
+        <h3 style="margin:1.5rem 0 .8rem">Comparing us to a premium quote?</h3>
+        <div class="pitch-grid">
+          <div class="card"><h4>Same physics</h4><p>An RTK fix is ~1 cm regardless of the logo. If the job doesn't need the edge-case robustness, the premium buys nothing.</p></div>
+          <div class="card"><h4>Total cost <button class="see-live" data-w="w-tco">▶ see it</button></h4><p>Features and corrections locked behind subscriptions widen the gap over time. Ours don't.</p></div>
+          <div class="card"><h4>Versatility</h4><p>Our units switch roles - base today, rover tomorrow. Their gear tends to be locked into one role per device.</p></div>
+          <div class="card"><h4>Repairability <button class="see-live" data-w="w-swap">▶ see it</button></h4><p>Open firmware, published schematics, and on the Facet FP a swappable GNSS engine. A failed part is a repair, not a service contract.</p></div>
+        </div>
+        <div class="callout"><strong>Our first question is always:</strong> "what accuracy do you actually need?" Often the premium quote is more than the job requires - and sometimes even our own base-rover pair is, and a single TX2 with affordable corrections does it. We would rather sell you the smaller right answer.</div>
+      </section>
+      <div class="next-cue">Next: <button data-goto="visuals">play with the visuals →</button></div>
+    </section>
+  </div>
+
+  <!-- ================= SHARED PANEL: VISUALS ================= -->
+  <section class="panel" data-panel="visuals" id="p-compare">
+    <section class="block">
+      <h2>See it, don't just read it.</h2>
+      <div class="sub">Every claim on this page has a visual you can play with. Pick a topic, then a visual - it loads right here. All 22 also live in the <a href="../lab/index.html">Visual Lab</a>.</div>
+      <div class="station">
+        <div class="st-rowwrap"><span class="st-label">Topic</span><div class="st-row groups" id="st-groups"></div></div>
+        <div class="st-tray"><span class="st-label">Visuals in<br><b id="st-gname"></b></span><div class="st-row items" id="st-items"></div></div>
+        <iframe id="st-frame" src="../lab/index.html?embed=1&w=w-radio" title="Interactive visual" loading="lazy"></iframe>
+        <div class="st-foot">
+          <span id="st-count"></span>
+          <a id="st-open" href="../lab/index.html#w-radio" target="_blank" rel="noopener">Open full size in the Visual Lab ↗</a>
+        </div>
+      </div>
+    </section>
+  </section>
+
+  <div class="callout" style="margin-top:1rem"><strong>Prices:</strong> verified against sparkpnt.com on August 14, 2026.</div>
+</main>
+
+<footer class="site-footer">
+  <span>PNT Lab - Product Guide. A personal study project, not an official SparkPNT site.</span>
+  <span><a href="https://www.sparkpnt.com" target="_blank" rel="noopener">sparkpnt.com</a> · <a href="https://docs.sparkpnt.com" target="_blank" rel="noopener">docs</a> · <a href="engines.html">Engine deep dive</a> · <a href="../lab/index.html">Visual Lab</a></span>
+</footer>
+
+<script>
+(function () {
+  // ---------- Mode + panel navigation ----------
+  const body = document.body;
+  const bf = document.getElementById("btn-field"), bp = document.getElementById("btn-pro");
+  const PANELS = {
+    field: [["choose", "1 · Help me choose"], ["products", "2 · The products"], ["repair", "3 · Warranty & support"], ["visuals", "4 · See it live"]],
+    pro: [["specs", "1 · Spec matrix"], ["timing", "2 · Timing line"], ["support", "3 · Support notes"], ["competition", "4 · Competition"], ["visuals", "5 · See it live"]],
+  };
+  let mode = localStorage.getItem("pntlab-guide-mode") || "field";
+  let panel = { field: "choose", pro: "specs" };
+  try { Object.assign(panel, JSON.parse(localStorage.getItem("pntlab-guide-panel") || "{}")); } catch {}
+
+  function navDraw() {
+    document.getElementById("panel-nav").innerHTML = PANELS[mode].map(([id, label]) =>
+      '<button class="pn-btn ' + (id === panel[mode] ? "sel" : "") + '" data-panel-btn="' + id + '">' + label + '</button>').join("");
+  }
+  function showPanel(id, scroll) {
+    panel[mode] = id;
+    localStorage.setItem("pntlab-guide-panel", JSON.stringify(panel));
+    document.querySelectorAll(".panel").forEach(p => p.classList.toggle("show", p.dataset.panel === id));
+    navDraw();
+    if (scroll !== false) window.scrollTo({ top: document.getElementById("panel-nav").offsetTop - 70, behavior: "smooth" });
+  }
+  function setMode(m, keepPanel) {
+    mode = m;
+    body.className = "mode-" + m;
+    bf.classList.toggle("active", m === "field");
+    bp.classList.toggle("active", m === "pro");
+    localStorage.setItem("pntlab-guide-mode", m);
+    // panels valid for this mode: current stored one, else first
+    if (!PANELS[m].some(([id]) => id === panel[m])) panel[m] = PANELS[m][0][0];
+    showPanel(panel[m], false);
+  }
+  bf.addEventListener("click", () => setMode("field"));
+  bp.addEventListener("click", () => setMode("pro"));
+  document.getElementById("panel-nav").addEventListener("click", e => {
+    const b = e.target.closest("[data-panel-btn]");
+    if (b) showPanel(b.dataset.panelBtn);
+  });
+  document.addEventListener("click", e => {
+    const g = e.target.closest("[data-goto]");
+    if (g) showPanel(g.dataset.goto);
+  });
+  setMode(mode);
+
+  // ---------- Product search ----------
+  const PRODUCTS = [
+    { n: "TX2", p: "$1,250", id: "p-tx2", mode: "field", panel: "products", tag: "handheld rover", k: "tx2 handheld rover gis ios iphone mfi esp-now espnow has galileo quectel lg290p torch" },
+    { n: "Facet FPL", p: "$1,550 / $1,700-T", id: "p-fpl", mode: "field", panel: "products", tag: "value RTK", k: "fpl fpl-t facet value budget lora base rover ag farm ranch quectel lg290p" },
+    { n: "Facet FPX", p: "$1,650 / $1,800-T", id: "p-fpx", mode: "field", panel: "products", tag: "endurance / OEM", k: "fpx fpx-t facet drone drones uav oem autonomy endurance battery ublox u-blox zed x20p l-band lband spartn pointperfect" },
+    { n: "Facet FPM", p: "$1,950 / $2,100-T", id: "p-fpm", mode: "field", panel: "products", tag: "surveyor", k: "fpm fpm-t facet surveyor survey rinex opus septentrio mosaic x5 aim jamming 100hz ppk boundary" },
+    { n: "SXM-E Reference Station", p: "$1,250 kit", id: "p-sxme", mode: "field", panel: "products", tag: "base station", k: "sxm sxm-e sxme reference station base cors permanent ntrip district campus" },
+    { n: "SXT / SXT-D Timing", p: "$2,500 / $3,500", id: "p-sxt", mode: "field", panel: "products", tag: "timing", k: "sxt sxt-d sxtd timing clock oscillator gnssdo disciplined ocxo holdover pps atomichron data center lab" },
+    { n: "Tilt (-T) variants", p: "+$150", id: "p-fpl", mode: "field", panel: "products", tag: "IMU tilt", k: "tilt imu pole -t fpl-t fpx-t fpm-t compensation level bubble" },
+    { n: "Warranty & support", p: "", id: "p-repair", mode: "field", panel: "repair", tag: "warranty, engineers, FP swap", k: "warranty support repair engineering troubleshooting open source schematics flex module swap upgrade fp engine rma" },
+    { n: "Help me choose (wizard)", p: "", id: null, mode: "field", panel: "choose", tag: "3 questions", k: "wizard choose help which unit recommend questions" },
+    { n: "Visual viewer", p: "", id: null, mode: "both", panel: "visuals", tag: "22 visuals, pick one", k: "compare comparison battery radio range update rate hz interactive graphics visual viewer see lab" },
+    { n: "Full spec matrix (Pro)", p: "", id: "p-specs", mode: "pro", panel: "specs", tag: "specs table", k: "specs specifications matrix table bands accuracy osnma has rinex compare pro engine housing magnesium" },
+    { n: "Timing line specs (Pro)", p: "", id: "p-timing", mode: "pro", panel: "timing", tag: "SXM/SXT specs", k: "sxm sxt timing specs reference oscillator mosaic-t table pro" },
+    { n: "Support notes (Pro)", p: "", id: null, mode: "pro", panel: "support", tag: "MSM, firmware, RMA", k: "support msm rtcm firmware ntrip clients lband l-band warranty rma legacy" },
+    { n: "Competition (Pro)", p: "", id: null, mode: "pro", panel: "competition", tag: "Trimble, Emlid...", k: "competition competitors trimble topcon emlid objection total cost versus" },
+    { n: "Engine Deep Dive page", p: "", href: "engines.html", mode: "both", tag: "ZED-X20P vs mosaic-X5", k: "engine chips zed x20p mosaic x5 deep dive datasheet ublox septentrio comparison" },
+    { n: "Tilt simulator (-T)", p: "", href: "../lab/index.html#w-tilt", mode: "both", tag: "why -T exists", k: "tilt simulator bubble level demo visual" },
+    { n: "SXM-E cost simulator", p: "", href: "../lab/index.html#w-sxme", mode: "both", tag: "station vs subs", k: "sxme cost simulator team rovers subscription break even visual" },
+    { n: "Holdover explainer", p: "", href: "../lab/index.html#w-holdover", mode: "both", tag: "SXT timing", k: "holdover drift clock oscillator ocxo tcxo quartz timing sxt outage visual" },
+  ];
+  const inp = document.getElementById("psearch");
+  const resBox = document.getElementById("psearch-results");
+  let hits = [], sel = -1;
+  function renderResults() {
+    resBox.innerHTML = hits.map((h, i) => `
+      <div class="res ${i === sel ? "sel" : ""}" data-i="${i}">
+        <span class="nm">${h.n}</span>${h.p ? `<span class="pr">${h.p}</span>` : ""}<span class="tg">${h.tag}</span>
+      </div>`).join("");
+    resBox.classList.toggle("on", hits.length > 0);
+  }
+  function search(q) {
+    q = q.trim().toLowerCase();
+    if (!q) { hits = []; sel = -1; renderResults(); return; }
+    const terms = q.split(/\s+/);
+    hits = PRODUCTS.filter(p => terms.every(t => (p.n + " " + p.k).toLowerCase().includes(t))).slice(0, 7);
+    sel = hits.length ? 0 : -1;
+    renderResults();
+  }
+  function go(h) {
+    if (!h) return;
+    resBox.classList.remove("on"); inp.blur();
+    if (h.href) { window.location.href = h.href; return; }
+    if (h.mode === "field" && mode !== "field") setMode("field");
+    if (h.mode === "pro" && mode !== "pro") setMode("pro");
+    if (h.panel) showPanel(h.panel, false);
+    const el = h.id && document.getElementById(h.id);
+    if (el) {
+      setTimeout(() => {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");
+      }, 80);
+    } else {
+      window.scrollTo({ top: document.getElementById("panel-nav").offsetTop - 70, behavior: "smooth" });
+    }
+  }
+  inp.addEventListener("input", () => search(inp.value));
+  inp.addEventListener("keydown", e => {
+    if (e.key === "ArrowDown") { sel = Math.min(sel + 1, hits.length - 1); renderResults(); e.preventDefault(); }
+    else if (e.key === "ArrowUp") { sel = Math.max(sel - 1, 0); renderResults(); e.preventDefault(); }
+    else if (e.key === "Enter") { go(hits[sel]); e.preventDefault(); }
+    else if (e.key === "Escape") { resBox.classList.remove("on"); inp.blur(); }
+  });
+  resBox.addEventListener("mousedown", e => {
+    const r = e.target.closest("[data-i]");
+    if (r) { go(hits[+r.dataset.i]); e.preventDefault(); }
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key === "/" && document.activeElement !== inp && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) {
+      inp.focus(); e.preventDefault();
+    }
+  });
+  document.addEventListener("click", e => { if (!e.target.closest(".psearch")) resBox.classList.remove("on"); });
+
+  // ---------- Wizard ----------
+  const answers = {};
+  const reco = document.getElementById("w-reco");
+  document.querySelectorAll(".wizard .opts button").forEach(b => {
+    b.addEventListener("click", () => {
+      const q = b.dataset.q;
+      answers[q] = b.dataset.v;
+      b.parentElement.querySelectorAll("button").forEach(x => x.classList.remove("sel"));
+      b.classList.add("sel");
+      if (q === "1") document.getElementById("w-q2").style.display = "";
+      if (q === "2") document.getElementById("w-q3").style.display = "";
+      if (q === "3") {
+        // Drone/autonomy path needs one more question: FPX and FPM both have OSNMA,
+        // so the differentiator is endurance vs dynamics, not security.
+        const q4 = document.getElementById("w-q4");
+        if (b.dataset.v === "drone") { q4.style.display = ""; delete answers["4"]; reco.classList.remove("on"); return; }
+        q4.style.display = "none"; delete answers["4"];
+      }
+      const needQ4 = answers["3"] === "drone";
+      if (answers["1"] && answers["2"] && answers["3"] && (!needQ4 || answers["4"])) recommend();
+    });
+  });
+  function recommend() {
+    const { 1: where, 2: acc, 3: special, 4: platform } = answers;
+    let title, body_, extra = "";
+    if (special === "drone") {
+      if (platform === "dynamics") {
+        title = "Facet FPM - $1,950";
+        body_ = "For fast autonomous platforms and contested radio environments: 100 Hz updates with under 10 ms delay, AIM+ interference protection that actively fights jammers, and native RINEX logging for PPK deliverables. Spoofing protection (OSNMA) included - same as the FPX.";
+      } else {
+        title = "Facet FPX - $1,650";
+        body_ = "For endurance-driven platforms: the lowest power draw and longest battery in the family (54 hours), native PointPerfect corrections integration, and L-Band-ready hardware. Spoofing protection (OSNMA) included - same as the FPM.";
+      }
+    } else if (acc === "survey") {
+      title = special === "pole" ? "Facet FPM-T - $2,100" : "Facet FPM - $1,950";
+      body_ = "The surveyor's unit: the most precise engine in the lineup and native RINEX logging - the cleanest path to OPUS-grade, legally defensible positions." + (special === "pole" ? " The -T adds tilt compensation for long pole days." : "");
+    } else if (acc === "foot") {
+      title = "TX2 - $1,250";
+      body_ = "With free Galileo HAS corrections you'll get better than 20 cm anywhere on Earth - no subscription, no internet needed. The most affordable setup that meets your spec.";
+    } else if (where === "nocell") {
+      title = "Two Facet FPLs (base + rover) - $3,100";
+      body_ = "No cell service means internet corrections are out. An FPL on a tripod broadcasts corrections by radio to a second FPL kilometers away: about 1 cm relative accuracy, zero subscriptions, fully self-contained.";
+      if (special === "pole") { title = "FPL (base) + FPL-T (rover) - $3,250"; body_ += " The -T rover adds tilt compensation."; }
+    } else {
+      title = special === "pole" ? "Facet FPL-T + PointPerfect Flex - $1,700 + $15/mo" : "TX2 + PointPerfect Flex - $1,250 + $15/mo";
+      body_ = "The 90% answer: with cell service, a $15/month corrections subscription gets you 3–6 cm in seconds. Check your state first - many states give corrections away free, and if yours does we'll set you up with that instead.";
+      if (special === "pole") body_ += " The -T adds tilt compensation for pole work.";
+    }
+    extra = "<p style='font-size:.85rem;margin-top:.6rem;color:#777'>This is a starting point, not a quote - prices change and your state may have free corrections. Call and we'll confirm the cheapest setup that meets your spec.</p>";
+    reco.innerHTML = "<h3>" + title + "</h3><p style='font-size:.95rem'>" + body_ + "</p>" + extra +
+      "<button class='btn btn-outline btn-sm restart' id='w-restart'>Start over</button> <button class='btn btn-primary btn-sm' data-goto='products' style='margin-left:.4rem'>See the full family →</button>";
+    reco.classList.add("on");
+    document.getElementById("w-restart").addEventListener("click", () => {
+      Object.keys(answers).forEach(k => delete answers[k]);
+      document.querySelectorAll(".wizard .opts button").forEach(x => x.classList.remove("sel"));
+      document.getElementById("w-q2").style.display = "none";
+      document.getElementById("w-q3").style.display = "none";
+      document.getElementById("w-q4").style.display = "none";
+      reco.classList.remove("on");
+    });
+  }
+
+  // ---------- Visual viewer station ----------
+  const ST_CAT = [
+    { g: "Accuracy", items: [["w-acc", "What accuracy looks like"], ["w-fix", "Fix vs Float"], ["w-race", "Settling time race"], ["w-ppm", "Error vs distance"], ["w-age", "Age of corrections"]] },
+    { g: "Field & troubleshooting", items: [["w-si", "Survey-In vs Fixed"], ["w-off", "My data is off"], ["w-sky", "Sky view & multipath"], ["w-ghost", "Ghost corrections"]] },
+    { g: "Products & toughness", items: [["w-swap", "Flex engine swap"], ["w-radio", "Radio link range"], ["w-bat", "Battery hours"], ["w-hz", "Update rate"], ["w-tilt", "Tilt (-T)"], ["w-ip67", "Dust, water & drop"], ["w-dome", "Satellites in view"]] },
+    { g: "Money", items: [["w-costs", "Corrections cost"], ["w-sxme", "One station, whole team"], ["w-tco", "Us vs big-name"]] },
+    { g: "Timing", items: [["w-pps", "The timing pulse"], ["w-holdover", "Holdover (SXT)"]] },
+    { g: "Apps", items: [["w-apps", "Works with your apps"]] },
+  ];
+  let stGroup = 2, stW = "w-radio";
+  function stationDraw() {
+    document.getElementById("st-groups").innerHTML = ST_CAT.map((c, i) =>
+      '<button class="stbtn ' + (i === stGroup ? "sel" : "") + '" data-g="' + i + '">' + c.g + (i === stGroup ? '<span class="caret">▾</span>' : '') + '</button>').join("");
+    document.getElementById("st-gname").textContent = ST_CAT[stGroup].g;
+    document.getElementById("st-items").innerHTML = ST_CAT[stGroup].items.map(([id, tt]) =>
+      '<button class="stbtn ' + (id === stW ? "sel" : "") + '" data-w-st="' + id + '">' + tt + '</button>').join("");
+    document.getElementById("st-count").textContent = ST_CAT.reduce((s, c) => s + c.items.length, 0) + " visuals";
+    document.getElementById("st-open").href = "../lab/index.html#" + stW;
+  }
+  function stationShow(id) {
+    stW = id;
+    stGroup = Math.max(0, ST_CAT.findIndex(c => c.items.some(([i]) => i === id)));
+    document.getElementById("st-frame").src = "../lab/index.html?embed=1&w=" + id;
+    stationDraw();
+  }
+  document.getElementById("st-groups").addEventListener("click", e => {
+    const b = e.target.closest("[data-g]");
+    if (b) { stGroup = +b.dataset.g; stW = ST_CAT[stGroup].items[0][0]; stationShow(stW); }
+  });
+  document.getElementById("st-items").addEventListener("click", e => {
+    const b = e.target.closest("[data-w-st]");
+    if (b) stationShow(b.dataset.wSt);
+  });
+  stationDraw();
+
+  // ---------- "see it live" modal ----------
+  const vm = document.createElement("div");
+  vm.className = "vmodal";
+  vm.innerHTML = '<div class="box"><div class="bar"><button id="vm-close">close ✕</button></div><iframe id="vm-frame" title="Interactive visual"></iframe></div>';
+  document.body.appendChild(vm);
+  window.addEventListener("message", e => {
+    if (!e.data || !e.data.pntH) return;
+    const h = Math.min(Math.max(e.data.pntH + 24, 320), 640) + "px";
+    ["st-frame", "vm-frame", "swap-inline"].forEach(id => {
+      const f = document.getElementById(id);
+      if (f && f.contentWindow === e.source) f.style.height = h;
+    });
+  });
+  document.addEventListener("click", e => {
+    const b = e.target.closest(".see-live");
+    if (b) {
+      document.getElementById("vm-frame").src = "../lab/index.html?embed=1&w=" + b.dataset.w;
+      vm.classList.add("on");
+    }
+    if (e.target === vm || e.target.closest("#vm-close")) {
+      vm.classList.remove("on");
+      document.getElementById("vm-frame").src = "about:blank";
+    }
+  });
+})();
+</script>
+</body>
+</html>

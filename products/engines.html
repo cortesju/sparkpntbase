@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Engine Deep Dive: ZED-X20P vs mosaic-X5 - PNT Lab</title>
+<link rel="stylesheet" href="../assets/style.css?v=1786981062">
+<style>
+  main { max-width: 1100px; margin: 0 auto; padding: 0 var(--page-pad) 3rem; }
+  section.block { margin: 2.5rem 0 0; }
+  section.block > h2 { font-size: clamp(1.4rem, 2.5vw, 1.9rem); margin-bottom: .4rem; }
+  section.block > .sub { color: #777; margin-bottom: 1.2rem; max-width: 75ch; }
+
+  .table-scroll { overflow-x: auto; border-radius: var(--card-radius); box-shadow: var(--shadow); }
+  table.specs { border-collapse: collapse; width: 100%; min-width: 760px; background: #fff; font-size: .87rem; }
+  .specs th, .specs td { padding: .65rem .9rem; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .specs thead th { font-family: var(--font-heading); font-weight: 600; color: var(--heading); background: rgba(51,51,51,.03); }
+  .specs tbody th { font-weight: 500; color: var(--heading); white-space: nowrap; }
+  .specs .win { color: var(--teal); font-weight: 700; }
+  .specs .flag { color: var(--info-text); font-weight: 500; }
+
+  .verdict-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.4rem; }
+  @media (max-width: 800px) { .verdict-grid { grid-template-columns: 1fr; } }
+  .verdict-card h3 { font-size: 1.2rem; margin-bottom: .2rem; }
+  .verdict-card .chip-name { font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); font-weight: 700; margin-bottom: .6rem; }
+  .verdict-card ul { font-size: .9rem; padding-left: 1.1rem; }
+  .verdict-card li { margin-bottom: .35rem; }
+
+  .callout { background: var(--info-bg); border-radius: var(--card-radius); padding: 1.2rem 1.5rem; font-size: .92rem; margin: 1.5rem 0 0; }
+  .callout strong { color: var(--info-text); }
+  .callout-teal { background: #ECFDF9; }
+  .callout-teal strong { color: var(--teal); }
+  .callout-red { background: var(--error-bg); }
+  .callout-red strong { color: var(--error-text); }
+</style>
+<!-- PNT Lab public build 2026-10-22. Client tracker and outreach research are not part of this site. -->
+</head>
+<body>
+
+<header class="site-header">
+  <a class="brand" href="../index.html"><span class="spark">⌖</span> PNT Lab</a>
+  <nav class="site-nav">
+    <a href="../index.html">Home</a>
+    <a href="../study/index.html">Study Tracker</a>
+    <a href="index.html">Product Guide</a>
+    <a href="../atlas/index.html">RTK Atlas</a>
+  </nav>
+</header>
+
+<main>
+  <section class="hero" style="padding-left:0;padding-right:0;padding-bottom:1rem;">
+    <div class="kicker">Engine report · from the official datasheets · Aug 2026</div>
+    <h1>ZED-X20P vs mosaic-X5.</h1>
+    <p>The chips inside the FPX and FPM, compared spec-by-spec from u-blox and Septentrio's own datasheets - written because "the FPX is the security pick" turned out to be wrong. <strong>Both engines carry OSNMA anti-spoofing.</strong> Here's what actually separates them.</p>
+  </section>
+
+  <div class="callout callout-red"><strong>The correction that triggered this report:</strong> we had been differentiating the FPX as "the security pick" on OSNMA grounds. Per the product lead and confirmed in both datasheets: the mosaic-X5 (FPM) also supports OSNMA, plus Septentrio's AIM+ interference mitigation. Security is table stakes on both - the real differences are below.</div>
+
+  <section class="block">
+    <h2>Head-to-head, from the datasheets.</h2>
+    <div class="sub">Sources: u-blox ZED-X20P-01B Data Sheet R01 (June 2026, initial production, FW HPG 2.10) · Septentrio mosaic-X5 datasheet (rev. July 2025). Green = meaningful advantage.</div>
+    <div class="table-scroll">
+      <table class="specs">
+        <thead><tr><th>Spec</th><th>u-blox ZED-X20P (in FPX)</th><th>Septentrio mosaic-X5 (in FPM)</th></tr></thead>
+        <tbody>
+          <tr><th>Class</th><td>All-band high-precision module, new-gen u-blox platform</td><td>Compact all-in-view multi-constellation receiver, 448 hw channels</td></tr>
+          <tr><th>Bands</th><td>L1, L2, L5, L6 (E6) + L-band variants</td><td>All bands incl. E6, E5 AltBOC, GPS L1PY/L2P - P(Y) code - GLONASS L3, <span class="win">on-module L-band</span></td></tr>
+          <tr><th>RTK accuracy (H)</th><td>0.6 cm + 1 ppm (CEP)</td><td class="win">0.6 cm + 0.5 ppm (RMS) - half the baseline error at distance</td></tr>
+          <tr><th>RTK accuracy (V)</th><td>1 cm + 1 ppm</td><td>1 cm + 1 ppm</td></tr>
+          <tr><th>RTK initialization</th><td>&lt; 7 s</td><td>7 s</td></tr>
+          <tr><th>Max update rate</th><td>25 Hz (RTK, PPP-RTK, raw)</td><td class="win">100 Hz position &amp; measurements, &lt;10 ms latency</td></tr>
+          <tr><th>Power (typical)</th><td class="win">~0.21 W tracking (65 mA @ 3.3 V) - why the FPX runs 54 h</td><td>0.6 W typ / 1.1 W max - why the FPM runs 32 h</td></tr>
+          <tr><th>Anti-spoofing</th><td>OSNMA + spoofing <em>detection &amp; reporting</em> + DHS navigation-data validation</td><td>OSNMA + AIM+ spoofing protection</td></tr>
+          <tr><th>Anti-jamming</th><td>Jamming detection &amp; reporting, spectrum analyzer</td><td class="win">AIM+ Premium active <em>mitigation</em> (narrow/wide band, chirp jammers) - it fights back, not just reports</td></tr>
+          <tr><th>Platform security</th><td class="win">Secure boot, tamper-resistant secure storage, config lockdown, root of trust</td><td>Config-level protections</td></tr>
+          <tr><th>SSR corrections</th><td class="win">Native SPARTN 2.0.2 (PointPerfect), CLAS (&lt;4 cm), Galileo HAS listed at &lt;20 cm</td><td>Not SPARTN-native (RTCM path); no HAS</td></tr>
+          <tr><th>OSR corrections</th><td>RTCM 3.4 in/out (MSM4/MSM7 base output)</td><td>RTCM v2.x/v3.x MSM in/out, CMR v2/CMR+</td></tr>
+          <tr><th>Raw data / logging</th><td>UBX-RAWX (RINEX-convention, needs conversion)</td><td class="win">Native RINEX v2.x/v3.x logging + SBF - the direct OPUS path</td></tr>
+          <tr><th>Robustness extras</th><td>Dynamics ≤ 4 g, 80 km altitude, 300 m/s</td><td class="win">LOCK+ shock/vibration tracking, MIL-STD-810G vibration, APME+ multipath, IONO+ scintillation, RAIM+</td></tr>
+          <tr><th>Timing precision</th><td>Timepulse 20 ns RMS / 60 ns @99%</td><td class="win">PPS 5 ns, event capture &lt; 20 ns</td></tr>
+          <tr><th>Moving-base heading</th><td>0.2° RMS @ 5 Hz</td><td>Moving base RTK @ 20 Hz output</td></tr>
+          <tr><th>Interfaces</th><td>2 UART (to 8 Mbps), USB 2.0 FS, SPI, I2C</td><td class="win">4 UART, <strong>Ethernet 10/100</strong>, USB 2.0 HS, SDIO, 2 event markers</td></tr>
+          <tr><th>Size / weight</th><td class="win">17 × 22 × 2.4 mm - half the footprint</td><td>31 × 31 × 4 mm, 6.8 g</td></tr>
+          <tr><th>Cold start</th><td class="win">25 s (hot 2 s)</td><td>&lt; 45 s (warm &lt; 20 s, reacq 1 s)</td></tr>
+          <tr><th>Temp range</th><td>−40 to +85 °C</td><td>−40 to +85 °C</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout"><strong>⚠ Flag for the product lead #2:</strong> the ZED-X20P datasheet lists <em>PPP (Galileo HAS) &lt; 0.20 m</em> as a supported positioning mode - meaning the FPX's chip appears HAS-capable, contradicting our "HAS lives only on the LG290P units" line. Product-level support depends on firmware integration, so verify before telling customers. If confirmed, the FPX story gets even better (free 20 cm anywhere + L-Band-ready).</div>
+  </section>
+
+  <section class="block">
+    <h2>So who buys which?</h2>
+    <div class="sub">Same body, same price ballpark ($1,650 vs $1,950, store-verified Aug 14), both OSNMA. The honest differentiation:</div>
+    <div class="verdict-grid">
+      <div class="card verdict-card">
+        <div class="chip-name">FPX · ZED-X20P</div>
+        <h3>The endurance &amp; ecosystem pick.</h3>
+        <ul>
+          <li><strong>3× lower power</strong> → 54 h battery, the longest in the family. Power budgets rule drones and remote deployments.</li>
+          <li><strong>PointPerfect-native.</strong> SPARTN decoding on-chip - the tightest integration with the $15/mo Flex service we recommend for 90% of customers.</li>
+          <li><strong>L-Band-ready hardware</strong> for the announced global PointPerfect service (no date - never promise one).</li>
+          <li><strong>Platform security stack:</strong> secure boot, secure storage, config lockdown - matters to OEMs building products around it.</li>
+          <li><strong>Smaller, cheaper, faster cold start.</strong> The volume-integration engine.</li>
+        </ul>
+      </div>
+      <div class="card verdict-card">
+        <div class="chip-name">FPM · mosaic-X5</div>
+        <h3>The performance-ceiling pick.</h3>
+        <ul>
+          <li><strong>100 Hz updates, &lt;10 ms latency</strong> (vs 25 Hz) - the spec that matters for fast control loops and high-dynamics platforms.</li>
+          <li><strong>AIM+ actively mitigates jamming</strong> - near jammers or in contested RF, it keeps working where detection-only receivers just report the problem.</li>
+          <li><strong>Native RINEX + Ethernet + SBF</strong> - the surveyor and reference-station workflow engine; the cleanest OPUS path.</li>
+          <li><strong>0.5 ppm baseline error</strong> - half the distance-dependent error on long baselines.</li>
+          <li><strong>5 ns timing, event markers, MIL-STD vibration</strong> - the choice when the deliverable is measurements, not just navigation.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="callout callout-teal"><strong>The one-line sales script:</strong> "Both are protected against spoofing - the question is whether your platform needs <em>endurance and PointPerfect integration</em> (FPX) or <em>update rate, jamming immunity, and survey-grade deliverables</em> (FPM)." For drones specifically: long-endurance mapping drone → FPX; fast autonomous platform in ugly RF, or PPK deliverables → FPM.</div>
+  </section>
+
+  <section class="block">
+    <h2>Sources</h2>
+    <p style="font-size:.88rem">
+      <a href="https://content.u-blox.com/sites/default/files/documents/ZED-X20P-01B_DataSheet_UBXDOC-304424225-21281.pdf" target="_blank" rel="noopener">u-blox ZED-X20P-01B Data Sheet (UBXDOC-304424225-21281 R01, 05-Jun-2026)</a> ·
+      <a href="https://docs.sparkfun.com/SparkFun_GNSS_mosaic-X5/assets/component_documentation/Septentrio_mosaic-X5_LR.pdf" target="_blank" rel="noopener">Septentrio mosaic-X5 datasheet (BBR 66/07/2025)</a> ·
+      <a href="https://www.u-blox.com/en/u-blox-zed-x20p-all-band-gnss-receiver" target="_blank" rel="noopener">u-blox ZED-X20P announcement</a> ·
+      <a href="https://www.septentrio.com/en/products/gnss-receivers/gnss-receiver-modules/mosaic-x5" target="_blank" rel="noopener">Septentrio mosaic-X5 product page</a>
+    </p>
+    <p style="font-size:.85rem;color:#999;margin-top:.5rem">Compiled 2026-08-13. Chip specs ≠ product specs: the Facet FP integration (antenna, firmware, power system) determines what reaches the customer. Verify product-level claims against docs.sparkpnt.com before quoting.</p>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <span>PNT Lab - Engine Deep Dive. Internal study material, not an official SparkPNT document.</span>
+  <span><a href="index.html">← Back to Product Guide</a></span>
+</footer>
+
+</body>
+</html>

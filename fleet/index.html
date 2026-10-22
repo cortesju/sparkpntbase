@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PNT Fleet Tracker - Sparkle-style mockup</title>
+<style>
+  /* Sparkle (sparkle.sparkfun.com) aesthetic - see design-system.md "Sparkle style" */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 13px; color: #222; background: #fff; }
+  a { color: rgb(34,102,153); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Top bar */
+  .topbar { background: #1b1b1b; color: #fff; display: flex; align-items: center; padding: 0 14px; height: 34px; font-size: 13px; }
+  .topbar .logo { font-weight: 700; font-size: 16px; color: #fff; letter-spacing: -.5px; }
+  .topbar .logo .spark { color: #e01a76; }
+  .topbar .crumb { color: #999; margin: 0 6px; }
+  .topbar .crumb-here { color: #ddd; }
+  .topbar .right { margin-left: auto; display: flex; gap: 16px; }
+  .topbar .right a { color: #9dbdd6; }
+  .topbar .pixel { width: 22px; height: 22px; margin-left: 10px; background:
+    conic-gradient(from 0deg, #e01a76 25%, #1b1b1b 0 50%, #e01a76 0 75%, #1b1b1b 0); image-rendering: pixelated; }
+
+  .layout { display: flex; min-height: calc(100vh - 34px); }
+
+  /* Sidebar */
+  .sidebar { width: 150px; padding: 18px 0 18px 14px; flex-shrink: 0; }
+  .sidebar a { display: block; padding: 6px 10px; font-size: 13.5px; color: rgb(34,102,153); }
+  .sidebar a.active { background: #fff; border: 1px solid #ddd; border-right: none; border-radius: 4px 0 0 4px; color: #222; font-weight: 700; }
+
+  main { flex: 1; padding: 18px 22px; max-width: 1250px; }
+  h1 { font-size: 28px; font-weight: 400; margin: 18px 0 10px; }
+  h1:first-child { margin-top: 0; }
+  .mock-note { background: #fcf8e3; border: 1px solid #faebcc; color: #8a6d3b; padding: 6px 10px; border-radius: 4px; display: inline-block; margin-bottom: 10px; }
+
+  /* Bootstrap-2 style buttons */
+  .btn2 { display: inline-block; padding: 4px 12px; font-size: 13px; color: #333; text-shadow: 0 1px 1px rgba(255,255,255,.75);
+    background: linear-gradient(#fff, #e6e6e6); border: 1px solid #ccc; border-bottom-color: #b3b3b3; border-radius: 4px; cursor: pointer;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 1px 2px rgba(0,0,0,.05); font-family: inherit; }
+  .btn2:hover { background: linear-gradient(#f8f8f8, #dcdcdc); text-decoration: none; }
+  .btn2.green { color: #fff; text-shadow: 0 -1px 0 rgba(0,0,0,.25); background: linear-gradient(#62c462, #51a351); border-color: #51a351 #51a351 #387038; }
+  .btn2.green:hover { background: linear-gradient(#57b957, #499349); }
+  .btn2.active-filter { background: #d9edf7; border-color: #9dbdd6; box-shadow: inset 0 2px 4px rgba(0,0,0,.1); }
+
+  input[type="text"], select { height: 26px; padding: 2px 6px; font-size: 13px; font-family: inherit; border: 1px solid #ccc; border-radius: 3px; }
+
+  /* Summary strip (gray panels like sparkle's home cells) */
+  .strip { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0 16px; }
+  .cell { background: #f7f7f7; border: 1px solid #e5e5e5; border-radius: 4px; padding: 8px 14px; min-width: 110px; }
+  .cell .n { font-size: 20px; font-weight: 700; }
+  .cell .l { font-size: 11.5px; color: #777; }
+  .cell.warn { background: #fcf8e3; border-color: #faebcc; }
+  .cell.warn .n { color: #8a6d3b; }
+  .cell.bad { background: #f2dede; border-color: #ebccd1; }
+  .cell.bad .n { color: #a94442; }
+  .cell.good .n { color: #3c763d; }
+
+  /* Fleet table */
+  table.fleet { border-collapse: collapse; width: 100%; background: #fff; }
+  .fleet th { text-align: left; font-size: 12px; padding: 6px 8px; background: #f5f5f5; border: 1px solid #ddd; white-space: nowrap; }
+  .fleet td { padding: 5px 8px; border: 1px solid #e5e5e5; font-size: 12.5px; vertical-align: top; }
+  .fleet tbody tr:nth-child(odd) { background: #fbfbfb; }
+  .fleet tbody tr:hover { background: #f0f6fa; }
+  .fleet .serial { font-weight: 700; color: rgb(34,102,153); cursor: pointer; white-space: nowrap; }
+  .status { display: inline-block; padding: 1px 8px; border-radius: 3px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .st-available { background: #dff0d8; color: #3c763d; }
+  .st-shipped { background: #d9edf7; color: #31708f; }
+  .st-active { background: #d9edf7; color: #31708f; }
+  .st-overdue { background: #f2dede; color: #a94442; }
+  .st-ambassador { background: #e7e2f3; color: #5b4a8a; }
+  .st-converted { background: #dff0d8; color: #3c763d; }
+  .st-returned { background: #f5f5f5; color: #666; }
+  .st-retired { background: #eee; color: #999; }
+
+  /* Row detail */
+  .detail-row td { background: #fdfdf5 !important; border-top: none; }
+  .detail-box { display: flex; gap: 26px; flex-wrap: wrap; padding: 4px 2px; }
+  .detail-box h4 { font-size: 12px; margin-bottom: 4px; }
+  .detail-box ul { list-style: none; font-size: 12px; }
+  .detail-box li { margin-bottom: 2px; }
+  .detail-box li.done::before { content: "✓ "; color: #3c763d; font-weight: 700; }
+  .detail-box li.todo::before { content: "○ "; color: #999; }
+  .detail-box li.late::before { content: "! "; color: #a94442; font-weight: 700; }
+
+  .toolbar-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+  .toolbar-row .spacer { flex: 1; }
+
+  /* right column links, sparkle-style */
+  .cols { display: flex; gap: 50px; flex-wrap: wrap; margin-top: 8px; }
+  .cols ul { list-style: none; }
+  .cols li { margin-bottom: 5px; }
+  .statusbox { background: #f7f7f7; border: 1px solid #e5e5e5; border-radius: 4px; padding: 10px 14px; font-size: 12px; margin-top: 22px; max-width: 320px; }
+  .statusbox b { display: inline-block; }
+</style>
+<!-- PNT Lab public build 2026-10-22. Client tracker and outreach research are not part of this site. -->
+</head>
+<body>
+
+<div class="topbar">
+  <span class="logo"><span class="spark">⌖</span> sparkle</span>
+  <span class="crumb">»</span><a href="#" onclick="return false">PNT</a>
+  <span class="crumb">»</span><span class="crumb-here">Fleet Tracker</span>
+  <span class="right">
+    <a href="../index.html">PNT Lab Home</a>
+    <a href="../program/index.html">Customer view</a>
+    <a href="#" onclick="return false">Help</a>
+  </span>
+  <span class="pixel" title="you"></span>
+</div>
+
+<div class="layout">
+  <nav class="sidebar">
+    <a class="active" href="#">fleet</a>
+    <a href="#" onclick="return false">trial requests</a>
+    <a href="#" onclick="return false">ambassadors</a>
+    <a href="#" onclick="return false">seed kits</a>
+    <a href="#" onclick="return false">reports</a>
+  </nav>
+
+  <main>
+    <span class="mock-note"><b>Mockup</b> - Sparkle-style internal interface for the trial &amp; ambassador fleet (doc 05 mechanics). Sample data only: every serial, organisation and date below is invented for the mockup. Stored in your browser.</span>
+
+    <h1>trial fleet</h1>
+    <div class="strip" id="summary"></div>
+
+    <div class="toolbar-row">
+      <button class="btn2 active-filter" data-f="all">All</button>
+      <button class="btn2" data-f="Available">Available</button>
+      <button class="btn2" data-f="Active">Active trials</button>
+      <button class="btn2" data-f="Overdue">Overdue</button>
+      <button class="btn2" data-f="Ambassador">Ambassador loans</button>
+      <span class="spacer"></span>
+      <input type="text" id="search" placeholder="serial / customer…">
+      <button class="btn2 green" id="add-unit">+ Add unit</button>
+    </div>
+
+    <table class="fleet">
+      <thead><tr>
+        <th>Serial</th><th>Model</th><th>Status</th><th>Customer / holder</th><th>Ship date</th><th>Day-30</th>
+        <th>Cond. out</th><th>Cond. in</th><th>Outcome</th><th>Rev. attributed</th><th>Cycles</th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+
+    <h1>lifecycle queue</h1>
+    <div class="cols">
+      <ul id="queue"></ul>
+      <ul>
+        <li><a href="#" onclick="return false">Print lid checklist (kit contents)</a></li>
+        <li><a href="#" onclick="return false">Set up PointPerfect seat</a></li>
+        <li><a href="#" onclick="return false">Generate prepaid return label</a></li>
+        <li><a href="#" onclick="return false">Day-45 auto-conversion invoice</a></li>
+        <li><a href="#" onclick="return false">Retire to B-stock listing</a></li>
+      </ul>
+    </div>
+
+    <div class="statusbox">
+      <b>program metrics (90-day):</b><br>
+      trial→purchase: <b id="m-conv">–</b> (target 40%, kill &lt;25%)<br>
+      unresolved non-returns: <b id="m-nr">–</b> (target 0)<br>
+      docs-feedback items filed: <b>7</b> (target 10+)<br>
+      <span style="color:#999">columns per doc 05 §1.3 · mirrors the RTK Repair Log pattern</span>
+    </div>
+  </main>
+</div>
+
+<script>
+(function () {
+  const KEY = "pntlab-fleet-v1";
+  // Sample fleet per doc 05 §1.3: 4 TX2, 2 FPL-T, 2 FPL (base/rover pair), 1-2 flex. SPNT DEMO tagged.
+  const seed = [
+    { serial: "SPNT-DEMO-001", model: "TX2", status: "Active", customer: "City of Golden Public Works (stormwater inventory)", ship: "2026-07-28", day30: "2026-08-27", condOut: "A", condIn: "-", outcome: "-", rev: 0, cycles: 2,
+      emails: { d0: true, d3: true, d14: true, d25: false, d35: false } },
+    { serial: "SPNT-DEMO-002", model: "TX2", status: "Overdue", customer: "Vantage UAS LLC (drone GCP eval)", ship: "2026-06-30", day30: "2026-07-30", condOut: "A", condIn: "-", outcome: "day-45 notice sent", rev: 0, cycles: 3,
+      emails: { d0: true, d3: true, d14: true, d25: true, d35: true } },
+    { serial: "SPNT-DEMO-003", model: "TX2", status: "Available", customer: "-", ship: "-", day30: "-", condOut: "A", condIn: "A", outcome: "returned + purchased FPL", rev: 1400, cycles: 4, emails: {} },
+    { serial: "SPNT-DEMO-004", model: "TX2", status: "Shipped", customer: "Front Range CC - Geomatics (institutional, Net-30)", ship: "2026-08-12", day30: "2026-09-11", condOut: "A", condIn: "-", outcome: "-", rev: 0, cycles: 1,
+      emails: { d0: true, d3: false, d14: false, d25: false, d35: false } },
+    { serial: "SPNT-DEMO-005", model: "FPL-T", status: "Active", customer: "Weld County Survey Crew (pole workflow eval)", ship: "2026-08-01", day30: "2026-08-31", condOut: "A", condIn: "-", outcome: "-", rev: 0, cycles: 1,
+      emails: { d0: true, d3: true, d14: false, d25: false, d35: false } },
+    { serial: "SPNT-DEMO-006", model: "FPL-T", status: "Converted", customer: "High Plains Ag Services", ship: "2026-07-02", day30: "2026-08-01", condOut: "A", condIn: "n/a", outcome: "kept unit (invoiced, fee credited)", rev: 1550, cycles: 2, emails: { d0: true, d3: true, d14: true, d25: true } },
+    { serial: "SPNT-DEMO-007", model: "FPL (base pair A)", status: "Available", customer: "-", ship: "-", day30: "-", condOut: "A", condIn: "A", outcome: "returned, no purchase yet", rev: 0, cycles: 2, emails: {} },
+    { serial: "SPNT-DEMO-008", model: "FPL (base pair B)", status: "Available", customer: "-", ship: "-", day30: "-", condOut: "A", condIn: "A", outcome: "returned, no purchase yet", rev: 0, cycles: 2, emails: {} },
+    { serial: "SPNT-DEMO-009", model: "FPX (flex)", status: "Ambassador", customer: "K. Ramos, PLS - YouTube 'Field Notes' (12-mo loan)", ship: "2026-06-15", day30: "renews 2027-06", condOut: "A", condIn: "-", outcome: "2 videos posted Q3", rev: 2340, cycles: 1, emails: {} },
+    { serial: "SPNT-DEMO-010", model: "FPM (flex)", status: "Retired", customer: "-", ship: "-", day30: "-", condOut: "-", condIn: "B", outcome: "6 cycles done → B-stock", rev: 0, cycles: 6, emails: {} }
+  ];
+  let fleet;
+  try { fleet = JSON.parse(localStorage.getItem(KEY)) || seed; } catch { fleet = seed; }
+  function save() { localStorage.setItem(KEY, JSON.stringify(fleet)); }
+
+  let filter = "all", search = "", openSerial = null;
+  const money = n => n ? "$" + n.toLocaleString() : "-";
+
+  function emailChecklist(u) {
+    const steps = [["d0","Day 0: shipped + onboarding link"],["d3","Day 3: first-fix check-in"],["d14","Day 14: mid-trial + case-study ask"],["d25","Day 25: decision email"],["d35","Day 35: return nudge"]];
+    if (!Object.keys(u.emails || {}).length) return "<li class='todo'>no active lifecycle</li>";
+    return steps.map(([k, label]) => {
+      const cls = u.emails[k] ? "done" : (u.status === "Overdue" ? "late" : "todo");
+      return `<li class="${cls}">${label}</li>`;
+    }).join("");
+  }
+
+  function render() {
+    const rows = document.getElementById("rows");
+    const visible = fleet.filter(u =>
+      (filter === "all" || u.status === filter) &&
+      (!search || (u.serial + " " + u.customer + " " + u.model).toLowerCase().includes(search)));
+    rows.innerHTML = visible.map(u => `
+      <tr>
+        <td class="serial" data-open="${u.serial}">${u.serial}</td>
+        <td>${u.model}</td>
+        <td><span class="status st-${u.status.toLowerCase()}">${u.status}</span></td>
+        <td>${u.customer}</td>
+        <td>${u.ship}</td><td>${u.day30}</td>
+        <td>${u.condOut}</td><td>${u.condIn}</td>
+        <td>${u.outcome}</td><td>${money(u.rev)}</td><td>${u.cycles}${u.cycles >= 5 ? " ⚠" : ""}</td>
+      </tr>
+      ${openSerial === u.serial ? `
+      <tr class="detail-row"><td colspan="11">
+        <div class="detail-box">
+          <div><h4>Lifecycle emails</h4><ul>${emailChecklist(u)}</ul></div>
+          <div><h4>Actions</h4><ul>
+            <li><a href="#" onclick="return false">Open HubSpot deal</a></li>
+            <li><a href="#" onclick="return false">Resend credentials</a></li>
+            <li><a href="#" onclick="return false">Mark returned (condition check)</a></li>
+            ${u.status === "Overdue" ? "<li><a href='#' onclick='return false'><b>Convert to sale (day 45)</b></a></li>" : ""}
+            ${u.cycles >= 5 ? "<li><a href='#' onclick='return false'>Retire to B-stock (≥6 cycles)</a></li>" : ""}
+          </ul></div>
+          <div><h4>Notes</h4><ul><li>Kit checklist printed in case lid</li><li>PointPerfect seat: ${u.status === "Active" || u.status === "Shipped" ? "active" : "released"}</li></ul></div>
+        </div>
+      </td></tr>` : ""}
+    `).join("");
+
+    // summary strip
+    const count = s => fleet.filter(u => u.status === s).length;
+    const conv = fleet.filter(u => u.outcome.includes("kept") || u.outcome.includes("purchased")).length;
+    const closed = fleet.filter(u => u.outcome !== "-" && u.status !== "Ambassador" && u.status !== "Retired").length;
+    const pct = closed ? Math.round((conv / closed) * 100) : 0;
+    document.getElementById("summary").innerHTML = `
+      <div class="cell good"><div class="n">${count("Available")}</div><div class="l">available</div></div>
+      <div class="cell"><div class="n">${count("Shipped") + count("Active")}</div><div class="l">out on trial</div></div>
+      <div class="cell ${count("Overdue") ? "bad" : ""}"><div class="n">${count("Overdue")}</div><div class="l">overdue</div></div>
+      <div class="cell"><div class="n">${count("Ambassador")}</div><div class="l">ambassador loans</div></div>
+      <div class="cell ${pct >= 40 ? "good" : pct >= 25 ? "warn" : "bad"}"><div class="n">${pct}%</div><div class="l">trial→purchase</div></div>
+      <div class="cell"><div class="n">${money(fleet.reduce((s, u) => s + u.rev, 0))}</div><div class="l">revenue attributed</div></div>`;
+    document.getElementById("m-conv").textContent = pct + "%";
+    document.getElementById("m-nr").textContent = count("Overdue");
+
+    // queue: next actions across fleet
+    const q = [];
+    fleet.forEach(u => {
+      if (u.status === "Shipped" && !(u.emails||{}).d3) q.push(`<li class="todo"><b>${u.serial}</b> - send day-3 first-fix check-in</li>`);
+      if (u.status === "Active" && (u.emails||{}).d14 === false) q.push(`<li class="todo"><b>${u.serial}</b> - day-14 mid-trial email due</li>`);
+      if (u.status === "Overdue") q.push(`<li class="late"><b>${u.serial}</b> - day-45 conversion decision (escalate to the product lead)</li>`);
+      if (u.cycles >= 5 && u.status === "Available") q.push(`<li class="todo"><b>${u.serial}</b> - approaching retirement (${u.cycles} cycles)</li>`);
+    });
+    document.getElementById("queue").innerHTML = q.join("") || "<li class='done'>queue clear</li>";
+  }
+
+  document.getElementById("rows").addEventListener("click", e => {
+    const s = e.target.closest("[data-open]");
+    if (s) { openSerial = openSerial === s.dataset.open ? null : s.dataset.open; render(); }
+  });
+  document.querySelectorAll("[data-f]").forEach(b => b.addEventListener("click", () => {
+    document.querySelectorAll("[data-f]").forEach(x => x.classList.remove("active-filter"));
+    b.classList.add("active-filter");
+    filter = b.dataset.f; render();
+  }));
+  document.getElementById("search").addEventListener("input", e => { search = e.target.value.toLowerCase(); render(); });
+  document.getElementById("add-unit").addEventListener("click", () => {
+    const n = fleet.length + 1;
+    fleet.push({ serial: "SPNT-DEMO-" + String(n).padStart(3, "0"), model: "TX2", status: "Available", customer: "-", ship: "-", day30: "-", condOut: "A", condIn: "A", outcome: "-", rev: 0, cycles: 0, emails: {} });
+    save(); render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

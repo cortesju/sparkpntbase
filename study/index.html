@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RTK Course - PNT Lab</title>
+<link rel="stylesheet" href="../assets/style.css?v=1786981062">
+<style>
+  main { max-width: 900px; margin: 0 auto; padding: 0 var(--page-pad) 4rem; }
+  .wide { max-width: 1100px; }
+
+  /* ---------- Course progress ---------- */
+  .course-head { display: flex; align-items: flex-end; gap: 1.5rem; flex-wrap: wrap; margin: 2rem 0 1.5rem; }
+  .course-head .stat { flex: 1 1 auto; }
+  .course-head .num { font-family: var(--font-heading); font-weight: 600; font-size: 2.4rem; color: var(--heading); line-height: 1; }
+  .course-head .lbl { font-size: .78rem; text-transform: uppercase; letter-spacing: .07em; color: #888; font-weight: 500; margin-top: .2rem; }
+  .bar { height: 8px; border-radius: 999px; background: rgba(51,51,51,.09); overflow: hidden; display: flex; }
+  .bar span { background: var(--teal); transition: width .5s cubic-bezier(.3,1,.3,1); }
+  .bar .done { background: var(--teal); }
+  .bar .passed { background: var(--success-text); }
+
+  /* ---------- Chapter cards ---------- */
+  .chapters { display: flex; flex-direction: column; gap: 1rem; }
+  .chapter-card {
+    display: grid; grid-template-columns: 54px 1fr auto; gap: 1.1rem; align-items: start;
+    background: #fff; border-radius: var(--card-radius); box-shadow: var(--shadow); padding: 1.25rem 1.4rem;
+    cursor: pointer; transition: transform var(--anim), box-shadow var(--anim); text-align: left; border: none; font-family: var(--font-body); width: 100%; }
+  .chapter-card:hover { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(51,51,51,.14); }
+  .chapter-card .n { font-family: var(--font-heading); font-weight: 600; font-size: 1.5rem; color: #fff; background: var(--heading);
+    width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .chapter-card.complete .n { background: var(--success-text); }
+  .chapter-card h2 { font-size: 1.15rem; margin-bottom: .25rem; }
+  .chapter-card .goal { font-size: .9rem; color: #666; margin-bottom: .7rem; }
+  .chapter-card .meta { font-size: .76rem; color: #999; display: flex; gap: .8rem; flex-wrap: wrap; margin-top: .5rem; }
+  .chapter-card .right { display: flex; flex-direction: column; align-items: flex-end; gap: .4rem; white-space: nowrap; }
+  .score-chip { font-size: .72rem; font-weight: 700; letter-spacing: .04em; padding: .2rem .6rem; border-radius: 999px; }
+  .score-pass { background: var(--success-bg); color: var(--success-text); }
+  .score-try { background: var(--info-bg); color: var(--info-text); }
+  .score-none { background: #F2F3F5; color: #999; }
+
+  /* ---------- Chapter view ---------- */
+  .crumb { font-size: .82rem; color: #888; margin: 1.5rem 0 .5rem; }
+  .crumb a { color: var(--price-blue); cursor: pointer; text-decoration: none; }
+  .crumb a:hover { color: var(--accent); }
+  .chapter-hero h1 { font-size: clamp(1.6rem, 3.5vw, 2.4rem); margin-bottom: .6rem; }
+  .chapter-hero .goal { font-size: 1.02rem; color: #555; max-width: 62ch; }
+  .chapter-hero .meta { font-size: .8rem; color: #999; margin-top: .8rem; }
+
+  .lesson { background: #fff; border-radius: var(--card-radius); box-shadow: var(--shadow); margin-bottom: .9rem; overflow: hidden; }
+  .lesson-head { display: flex; align-items: center; gap: .9rem; padding: 1rem 1.3rem; cursor: pointer; user-select: none; }
+  .lesson-head h3 { font-size: 1.02rem; flex: 1; font-weight: 600; }
+  .lesson.done .lesson-head h3 { color: #8a8a8a; }
+  .tick { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--border); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: .8rem; color: transparent; background: #fff; transition: all .25s; }
+  .lesson.done .tick { background: var(--teal); border-color: var(--teal); color: #fff; }
+  .lesson-head .chev { color: #bbb; transition: transform .3s; font-size: .8rem; }
+  .lesson.open .chev { transform: rotate(90deg); }
+  .lesson-body { display: none; padding: 0 1.3rem 1.3rem 4.1rem; }
+  .lesson.open .lesson-body { display: block; }
+  .lesson-body p { font-size: .95rem; line-height: 1.62; margin-bottom: .9rem; color: var(--text); }
+  .keys { background: #FAFAFA; border-radius: .7rem; padding: .9rem 1.1rem; margin: 1rem 0; }
+  .keys h4 { font-size: .72rem; text-transform: uppercase; letter-spacing: .07em; color: #999; margin-bottom: .5rem; }
+  .keys ul { list-style: none; }
+  .keys li { font-size: .89rem; padding: .22rem 0 .22rem 1.1rem; position: relative; }
+  .keys li::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); position: absolute; left: 0; top: .68rem; }
+
+  .links { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1rem 0; }
+  .links a { display: inline-flex; align-items: center; gap: .4rem; font-size: .82rem; text-decoration: none;
+    border: 1px solid var(--border); border-radius: 999px; padding: .32rem .85rem; color: var(--price-blue); transition: all .2s; }
+  .links a:hover { border-color: var(--price-blue); background: #F4F8FB; }
+  .links a .kind { font-size: .64rem; text-transform: uppercase; letter-spacing: .06em; font-weight: 700; color: #fff; background: var(--price-blue);
+    border-radius: 999px; padding: .08rem .4rem; }
+  .links a.video .kind { background: var(--accent); }
+  .links a.tool .kind { background: var(--teal); }
+  .links a.doc .kind { background: #7a7f87; }
+
+  .qcheck { border-left: 3px solid var(--highlight); padding: .1rem 0 .1rem 1rem; margin: 1rem 0; }
+  .qcheck .q { font-size: .9rem; font-weight: 500; color: var(--heading); }
+  .qcheck .a { font-size: .89rem; color: #555; margin-top: .5rem; display: none; }
+  .qcheck.shown .a { display: block; }
+  .qcheck button { background: none; border: none; font-family: var(--font-body); font-size: .8rem; color: var(--price-blue);
+    cursor: pointer; padding: .3rem 0 0; }
+  .qcheck button:hover { color: var(--accent); }
+
+  .note-btn { background: none; border: none; cursor: pointer; font-size: .78rem; color: #999; font-family: var(--font-body); padding: .4rem 0 0; }
+  .note-btn:hover { color: var(--accent); }
+  .note-btn.has { color: var(--info-text); font-weight: 700; }
+  .note-area { width: 100%; margin-top: .5rem; border: 1px solid var(--border); border-radius: .5rem; padding: .6rem;
+    font-family: var(--font-body); font-size: .88rem; display: none; resize: vertical; min-height: 70px; }
+  .lesson.noting .note-area { display: block; }
+
+  /* ---------- Exam ---------- */
+  .exam-cta { background: var(--highlight); border-radius: var(--card-radius); padding: 1.4rem 1.6rem; margin-top: 1.5rem;
+    display: flex; align-items: center; gap: 1.2rem; flex-wrap: wrap; }
+  .exam-cta h3 { font-size: 1.1rem; margin-bottom: .2rem; }
+  .exam-cta p { font-size: .88rem; color: #5f5245; flex: 1; min-width: 220px; }
+
+  .dots { display: flex; gap: .35rem; margin-bottom: 1.2rem; }
+  .dots i { width: 26px; height: 5px; border-radius: 999px; background: rgba(51,51,51,.12); }
+  .dots i.on { background: var(--heading); }
+  .dots i.right { background: var(--success-text); }
+  .dots i.wrong { background: var(--accent); }
+
+  .qcard { background: #fff; border-radius: var(--card-radius); box-shadow: var(--shadow); padding: clamp(1.4rem, 3vw, 2.2rem); }
+  .qcard .qnum { font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; color: #999; font-weight: 700; margin-bottom: .6rem; }
+  .qcard .qtext { font-family: var(--font-heading); font-weight: 600; font-size: clamp(1.1rem, 2.4vw, 1.4rem); color: var(--heading); line-height: 1.35; margin-bottom: 1.4rem; }
+
+  .opts { display: flex; flex-direction: column; gap: .6rem; }
+  .opt { display: flex; align-items: flex-start; gap: .8rem; border: 2px solid var(--border); border-radius: .8rem;
+    padding: .85rem 1rem; cursor: pointer; font-family: var(--font-body); font-size: .95rem; text-align: left;
+    background: #fff; color: var(--text); transition: all .2s; width: 100%; }
+  .opt:hover:not(:disabled) { border-color: var(--heading); }
+  .opt .letter { font-weight: 700; color: #999; flex-shrink: 0; width: 1.2rem; }
+  .opt.picked { border-color: var(--heading); background: #FAFAFA; }
+  .opt.right { border-color: var(--success-text); background: var(--success-bg); }
+  .opt.right .letter { color: var(--success-text); }
+  .opt.wrong { border-color: var(--error-text); background: var(--error-bg); }
+  .opt.wrong .letter { color: var(--error-text); }
+  .opt:disabled { cursor: default; }
+
+  .answer-box { width: 100%; font-family: var(--font-body); font-size: .95rem; padding: .9rem 1rem; border: 2px solid var(--border);
+    border-radius: .8rem; min-height: 96px; resize: vertical; background: #fff; color: var(--text); }
+  .answer-box:focus { outline: none; border-color: var(--heading); }
+
+  .verdict { margin-top: 1.3rem; border-radius: .8rem; padding: 1rem 1.2rem; font-size: .92rem; line-height: 1.55; }
+  .verdict.right { background: var(--success-bg); color: #3f620c; }
+  .verdict.wrong { background: var(--error-bg); color: #8f1030; }
+  .verdict h4 { font-size: .95rem; margin-bottom: .4rem; color: inherit; }
+  .verdict .model { margin-top: .7rem; padding-top: .7rem; border-top: 1px solid rgba(0,0,0,.08); }
+  .verdict .model b { display: block; font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; margin-bottom: .25rem; opacity: .75; }
+  .verdict .self { margin-top: .8rem; font-size: .82rem; }
+  .verdict .self button { font-family: var(--font-body); font-size: .8rem; border: 1px solid currentColor; background: transparent;
+    color: inherit; border-radius: 999px; padding: .25rem .8rem; cursor: pointer; margin-left: .4rem; }
+
+  .exam-actions { display: flex; gap: .7rem; margin-top: 1.4rem; align-items: center; flex-wrap: wrap; }
+  .exam-actions .spacer { flex: 1; }
+
+  /* ---------- Results ---------- */
+  .result { text-align: center; padding: clamp(1.5rem, 4vw, 3rem); }
+  .result .ring { width: 132px; height: 132px; border-radius: 50%; margin: 0 auto 1.2rem; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; font-family: var(--font-heading); }
+  .result .ring .pc { font-size: 2.4rem; font-weight: 600; line-height: 1; }
+  .result .ring .of { font-size: .78rem; opacity: .7; margin-top: .2rem; }
+  .result.pass .ring { background: var(--success-bg); color: var(--success-text); }
+  .result.fail .ring { background: var(--info-bg); color: var(--info-text); }
+  .result h2 { font-size: 1.5rem; margin-bottom: .5rem; }
+  .result p { color: #666; max-width: 46ch; margin: 0 auto 1.5rem; }
+  .review { text-align: left; margin-top: 2rem; }
+  .review h3 { font-size: .8rem; text-transform: uppercase; letter-spacing: .07em; color: #999; margin-bottom: .8rem; }
+  .review li { list-style: none; padding: .8rem 0; border-top: 1px solid var(--border); font-size: .9rem; }
+  .review li .rq { font-weight: 500; color: var(--heading); }
+  .review li .ra { color: #666; font-size: .86rem; margin-top: .3rem; }
+  .review li .mark { font-weight: 700; margin-right: .4rem; }
+  .review li.ok .mark { color: var(--success-text); }
+  .review li.no .mark { color: var(--accent); }
+
+
+  /* ---------- Diagrams, worked examples, glossary ---------- */
+  .fig { margin: 1.2rem 0; padding: 1rem 1.1rem; background: #FCFCFD; border: 1px solid var(--border); border-radius: .8rem; }
+  .fig svg { width: 100%; height: auto; display: block; }
+
+  .steps { margin: 1.1rem 0; padding: 0; counter-reset: st; list-style: none; }
+  .steps li { position: relative; padding: .55rem 0 .55rem 2.1rem; border-top: 1px solid var(--border); counter-increment: st; }
+  .steps li:first-child { border-top: none; }
+  .steps li::before { content: counter(st); position: absolute; left: 0; top: .62rem; width: 1.4rem; height: 1.4rem;
+    border-radius: 50%; background: var(--heading); color: #fff; font-size: .72rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; }
+  .steps li b { display: block; font-weight: 500; color: var(--heading); font-size: .92rem; }
+  .steps li span { display: block; font-size: .87rem; color: #666; margin-top: .2rem; }
+
+  .qc-try { width: 100%; margin: .6rem 0 .4rem; border: 1px solid var(--border); border-radius: .5rem; padding: .55rem .7rem;
+    font-family: var(--font-body); font-size: .88rem; min-height: 56px; resize: vertical; background: #fff; }
+  .qc-try:focus { outline: none; border-color: var(--heading); }
+  .qcheck button:disabled { color: #bbb; cursor: not-allowed; }
+  .qc-mine { font-size: .87rem; color: #555; background: #FAFAFA; border-radius: .5rem; padding: .5rem .7rem; margin: .5rem 0; }
+  .qc-mine b { display: block; font-size: .68rem; text-transform: uppercase; letter-spacing: .06em; color: #aaa; margin-bottom: .2rem; }
+
+  .final-cta { background: var(--heading); color: #fff; border-radius: var(--card-radius); padding: 1.5rem 1.7rem;
+    margin: 1.75rem 0 .5rem; display: flex; align-items: center; gap: 1.2rem; flex-wrap: wrap; }
+  .final-cta h3 { color: #fff; font-size: 1.15rem; margin-bottom: .25rem; }
+  .final-cta p { font-size: .88rem; color: rgba(255,255,255,.72); }
+
+  .gfilter { width: 100%; font-family: var(--font-body); font-size: .95rem; padding: .75rem 1rem; margin-bottom: 1.2rem;
+    border: 1px solid var(--border); border-radius: .6rem; background: rgba(23,23,23,.03); color: var(--text); }
+  .gfilter:focus { outline: none; border-color: var(--heading); background: #fff; }
+  .glossary { background: #fff; border-radius: var(--card-radius); box-shadow: var(--shadow); padding: .5rem 1.4rem; }
+  .gitem { display: grid; grid-template-columns: 165px 1fr; gap: 1rem; padding: .8rem 0; border-top: 1px solid var(--border); }
+  .gitem:first-child { border-top: none; }
+  .gitem dt { font-weight: 600; color: var(--heading); font-family: var(--font-heading); font-size: .95rem; }
+  .gitem dd { font-size: .89rem; color: var(--text); line-height: 1.55; }
+  @media (max-width: 620px) { .gitem { grid-template-columns: 1fr; gap: .2rem; } }
+
+  .toolbar { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; margin: 1.5rem 0; }
+  .toolbar .spacer { flex: 1; }
+  .btn-ghost { background: none; border: none; font-family: var(--font-body); font-size: .85rem; color: #888; cursor: pointer; }
+  .btn-ghost:hover { color: var(--accent); }
+</style>
+<!-- PNT Lab public build 2026-10-22. Client tracker and outreach research are not part of this site. -->
+</head>
+<body>
+
+<header class="site-header">
+  <a class="brand" href="../index.html"><span class="spark">⌖</span> PNT Lab</a>
+  <nav class="site-nav">
+    <a href="../index.html">Home</a>
+    <a href="index.html" class="active">Study Tracker</a>
+    <a href="../products/index.html">Product Guide</a>
+    <a href="../atlas/index.html">RTK Atlas</a>
+    <a href="../program/index.html">Trial &amp; Corps</a>
+    <a href="../support/index.html">Device Support</a>
+  </nav>
+</header>
+
+<main id="app"></main>
+
+<footer class="site-footer">
+  <span>PNT Lab - a personal study project. Not an official SparkPNT site. Progress is saved in this browser.</span>
+  <span><a href="https://docs.sparkpnt.com" target="_blank" rel="noopener">docs</a> · <a href="https://community.sparkpnt.com" target="_blank" rel="noopener">forum</a></span>
+</footer>
+
+<script src="data.js?v=1788298885"></script>
+<script src="app.js?v=1788185394"></script>
+</body>
+</html>

@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SparkPNT Device Support</title>
+  <meta name="description" content="Plug in a SparkPNT or SparkFun RTK unit over USB to check it, reach its configuration menus, update firmware and send a report to support.">
+  <link rel="icon" href="assets/sparkpnt-logo-black.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css?v=1792691076">
+<!-- PNT Lab public build 2026-10-22. Client tracker and outreach research are not part of this site. -->
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="./"><img src="assets/sparkpnt-logo-black.svg" alt="SparkPNT"><span>Device Support</span></a>
+  <nav>
+    <a href="#drivers">Drivers</a>
+    <a href="https://docs.sparkpnt.com" target="_blank" rel="noopener">Documentation</a>
+    <a href="https://www.sparkpnt.com/pages/customer-support" target="_blank" rel="noopener">Customer Support</a>
+  </nav>
+</header>
+
+<main>
+  <!-- Not connected -->
+  <section id="view-connect" class="hero">
+    <p class="eyebrow">USB Self Service</p>
+    <h1>Plug In Your Unit.<br>We Will Take A Look.</h1>
+    <p class="lede">Connect a SparkPNT receiver (TX2, Torch, FP series) or a SparkFun RTK unit with a USB-C cable. This page reads the unit's status, points out anything that looks wrong, gives you a simple way into its configuration menus, and prepares a report you can send to us.</p>
+    <div class="cta-row">
+      <button id="btn-connect" class="btn primary">Connect A Unit</button>
+      <button id="btn-connect-any" class="btn ghost">Show All Ports</button>
+      <button id="btn-connect-known" class="btn ghost hidden">Find A Unit On Ports Used Before</button>
+    </div>
+    <div id="connect-error" class="notice error hidden"></div>
+    <div id="browser-hint" class="notice info hidden"></div>
+    <ol class="steps">
+      <li><b>Power the unit on.</b> The USB port alone does not start it on every model.</li>
+      <li><b>Plug in a USB-C cable with data lines.</b> Some charging cables carry power only.</li>
+      <li><b>Pick the entry that ends in B.</b> The unit shows two ports; <i>USB-Enhanced-SERIAL-B</i> is the one that talks. If the page says it picked the wrong one, choose the other.</li>
+    </ol>
+    <p class="fine">Works in Chrome and Edge on Windows, macOS, Linux and ChromeOS. Everything runs in your browser; nothing leaves this computer until you send the report.</p>
+    <p class="fine">No unit at hand? <a href="?sim=tx2">Try a simulated TX2</a>, <a href="?sim=fpx">a simulated FPX-T with problems</a> or <a href="?sim=torch">a simulated Torch on old firmware</a>.</p>
+
+    <section id="drivers" class="drivers">
+      <h2>Drivers And What To Expect On The Cable</h2>
+      <p>Every SparkPNT unit (TX2, Torch, FP series) and the SparkFun RTK Postcard and EVK talk to the computer through a WCH <b>CH342</b> USB-to-serial bridge. It shows up as two ports, <i>USB-Enhanced-SERIAL-A CH342</i> and <i>USB-Enhanced-SERIAL-B CH342</i>. Port <b>B</b> is the unit's console, the one this page and any terminal program use. Port A carries the GNSS receiver's own data stream on the TX2 and Postcard. Older SparkFun RTK products (Surveyor, Express, Facet) use the single-port <b>CH340</b> bridge instead, shown as <i>USB-SERIAL CH340</i>.</p>
+      <div class="driver-grid">
+        <div>
+          <h3>Windows 10 And 11</h3>
+          <p>Plug the unit in and open Device Manager, under <i>Ports (COM &amp; LPT)</i>. If the two CH342 entries are there, nothing to install. If you see an unknown device or a device with a warning sign, install WCH's <a href="https://www.wch-ic.com/downloads/CH343SER_ZIP.html" target="_blank" rel="noopener">CH343SER driver</a> (one package for CH342 and CH343; run the setup EXE as administrator, then unplug and replug). For the older CH340 units use <a href="https://www.wch-ic.com/downloads/CH341SER_ZIP.html" target="_blank" rel="noopener">CH341SER</a>. SparkFun's <a href="https://learn.sparkfun.com/tutorials/how-to-install-ch340-drivers/all" target="_blank" rel="noopener">CH340 driver guide</a> has screenshots.</p>
+        </div>
+        <div>
+          <h3>macOS</h3>
+          <p>Install WCH's <a href="https://github.com/WCHSoftGroup/ch34xser_macos" target="_blank" rel="noopener">CH34x VCP driver</a> (covers CH340 through CH343; also on Homebrew as <code>wch-ch34x-usb-serial-driver</code>). macOS asks you to allow the driver under Privacy &amp; Security the first time. The unit then appears as <code>/dev/cu.wchusbserial...</code> entries.</p>
+        </div>
+        <div>
+          <h3>Linux</h3>
+          <p>Recent kernels include the <code>ch341</code> and <code>ch343</code> modules and need no download; the unit appears as <code>/dev/ttyACM*</code> or <code>/dev/ttyUSB*</code>. Add yourself to the <code>dialout</code> group (log out and in again). On Ubuntu and Debian the <code>brltty</code> package grabs these chips; remove it if the port vanishes a second after plugging in. Older kernels take WCH's <a href="https://github.com/WCHSoftGroup/ch343ser_linux" target="_blank" rel="noopener">ch343ser_linux</a> module.</p>
+        </div>
+        <div>
+          <h3>ChromeOS</h3>
+          <p>No driver needed. Pick the port in the browser's chooser.</p>
+        </div>
+      </div>
+      <h3>Two Things That Look Like A Dead Unit But Are Not</h3>
+      <ul class="plain">
+        <li><b>The unit restarts, or stays silent, when a terminal opens the port.</b> The bridge's DTR and RTS lines are wired to the processor's reset and boot pins (that is how firmware gets loaded). Most terminal programs assert both lines when they open the port, which holds the unit in reset: it prints nothing at all. This page releases the lines right after opening, so the unit restarts once and then talks. In a terminal program, turn off DTR and RTS (or hardware flow control) for the same result.</li>
+        <li><b>A Torch goes quiet 30 seconds after power on.</b> The Torch cannot talk to USB and to its LoRa radio at the same time, so by default it hands the port to the radio 30 seconds after it starts (the setting is called loraSerialInteractionTimeout, under Radios). Unplug and replug the cable to get the console back, or raise the setting. This page raises it to 10 minutes while connected and puts it back when you disconnect.</li>
+      </ul>
+    </section>
+  </section>
+
+  <!-- Connected -->
+  <section id="view-device" class="hidden">
+    <div class="device-card">
+      <div class="device-main">
+        <p class="eyebrow" id="dev-kind">Connected</p>
+        <h2 id="dev-name">Reading the unit</h2>
+        <p class="muted" id="dev-sub"></p>
+      </div>
+      <dl class="device-stats">
+        <div><dt>Mode</dt><dd id="dev-mode">-</dd></div>
+        <div><dt>Fix</dt><dd id="dev-fix">-</dd></div>
+        <div><dt>Satellites</dt><dd id="dev-siv">-</dd></div>
+        <div><dt>Accuracy</dt><dd id="dev-acc">-</dd></div>
+        <div><dt>Battery</dt><dd id="dev-batt">-</dd></div>
+      </dl>
+      <div class="device-actions">
+        <button id="btn-recheck" class="btn small">Run Check Again</button>
+        <button id="btn-disconnect" class="btn small ghost">Disconnect</button>
+      </div>
+    </div>
+
+    <div id="progress" class="progress hidden"><span class="spinner"></span><span id="progress-text">Working</span></div>
+    <div id="device-error" class="notice error hidden"></div>
+
+    <nav class="tabs" id="tabs">
+      <button data-tab="check" class="active">Check</button>
+      <button data-tab="console">Console</button>
+      <button data-tab="report">Report</button>
+      <button data-tab="update">Update</button>
+    </nav>
+
+    <!-- Check -->
+    <section id="panel-check" class="panel">
+      <p id="findings-summary" class="muted">Waiting for the first check.</p>
+      <div id="findings"></div>
+    </section>
+
+    <!-- Console -->
+    <section id="panel-console" class="panel hidden">
+      <p class="muted">This is the unit's own configuration menu, the same one you would reach with a terminal program. Numbers and letters pick an item, <b>x</b> goes back. The buttons do the typing for you.</p>
+      <div class="keyrow">
+        <span class="keylabel">Go To</span>
+        <button class="key" data-key="menu">Main Menu</button>
+        <button class="key" data-key="system">System Status</button>
+        <button class="key" data-key="gnss">GNSS Receiver</button>
+        <button class="key" data-key="firmware">Firmware Menu</button>
+        <button class="key" data-key="back">Back (x)</button>
+        <button class="key" data-key="leave">Leave Menu</button>
+      </div>
+      <div class="keyrow">
+        <span class="keylabel">Do</span>
+        <button class="key" data-key="rover">Switch To Rover</button>
+        <button class="key" data-key="base">Switch To Base</button>
+        <button class="key" data-key="bt-on">Turn Bluetooth On</button>
+        <button class="key warn" data-key="reboot">Restart Unit</button>
+        <button class="key warn" data-key="factory">Factory Reset</button>
+      </div>
+      <pre id="term" class="term" tabindex="0"></pre>
+      <form id="term-form" class="term-input">
+        <input id="term-in" type="text" autocomplete="off" spellcheck="false" placeholder="Type a menu choice or a $SP command and press Enter">
+        <button class="btn small" type="submit">Send</button>
+        <button class="btn small ghost" type="button" id="term-clear">Clear</button>
+      </form>
+      <details class="setting-box">
+        <summary>Read Or Change One Setting</summary>
+        <form id="setting-form" class="setting-form">
+          <input id="setting-name" type="text" placeholder="setting name, for example minElev" autocomplete="off" spellcheck="false">
+          <input id="setting-value" type="text" placeholder="new value (leave empty to read)" autocomplete="off" spellcheck="false">
+          <button class="btn small" type="submit">Go</button>
+          <output id="setting-out"></output>
+        </form>
+        <p class="fine">Changes are saved to the unit right away. Some settings only take effect after a restart.</p>
+      </details>
+    </section>
+
+    <!-- Report -->
+    <section id="panel-report" class="panel hidden">
+      <div class="report-grid">
+        <div>
+          <label for="problem">What is happening? (goes at the top of the report)</label>
+          <textarea id="problem" rows="5" placeholder="For example: the unit shows RTK FLOAT for an hour, or the phone app cannot find it."></textarea>
+          <label for="contact">How can we reach you? (name and email or order number)</label>
+          <input id="contact" type="text" autocomplete="off">
+          <div class="cta-row">
+            <button id="btn-download" class="btn primary">Download Report</button>
+            <button id="btn-email" class="btn">Email Us</button>
+            <button id="btn-share" class="btn ghost hidden">Share</button>
+            <button id="btn-copy" class="btn ghost">Copy To Clipboard</button>
+          </div>
+          <p class="fine" id="report-help">Download the report first, then use Email Us and attach the downloaded file to the message that opens. Passwords and keys are blanked out.</p>
+        </div>
+        <div>
+          <label for="report-preview">Report preview</label>
+          <textarea id="report-preview" rows="24" readonly spellcheck="false"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- Update -->
+    <section id="panel-update" class="panel hidden">
+      <h3>Installed Firmware</h3>
+      <table class="versions" id="versions"><thead><tr><th>Part</th><th>Installed</th><th>Latest Release</th><th>Status</th></tr></thead><tbody></tbody></table>
+      <p class="fine" id="fw-source"></p>
+
+      <h3>Main Firmware Over USB</h3>
+      <p>The main processor firmware (what the menus call the ESP32 firmware) can be written straight from this page over the cable. The unit restarts twice and keeps its settings. Do not unplug it while the bar moves.</p>
+      <div class="update-form">
+        <label><input type="radio" name="fw-pick" value="release" checked> Current release <span id="fw-release-label"></span></label>
+        <label><input type="radio" name="fw-pick" value="beta"> Beta build <span id="fw-beta-label"></span></label>
+        <label class="check"><input type="checkbox" id="fw-ack"> I understand the unit will restart and I will not unplug it</label>
+        <button id="btn-flash" class="btn primary" disabled>Update Main Firmware</button>
+      </div>
+      <div id="flash-progress" class="bar hidden"><div id="flash-bar"></div></div>
+      <pre id="flash-log" class="log hidden"></pre>
+
+      <h3>Receiver, Radio And Tilt Firmware</h3>
+      <p>The GNSS receiver, the LoRa radio (Torch) and the tilt sensor are updated by the unit itself over WiFi. Give it a 2.4 GHz network and this page asks the unit to fetch and install whatever is newer. The unit restarts when it is done.</p>
+      <div class="update-form">
+        <input id="wifi-ssid" type="text" placeholder="WiFi network name (leave empty to use the one saved on the unit)" autocomplete="off">
+        <input id="wifi-pass" type="password" placeholder="WiFi password" autocomplete="off">
+        <button id="btn-wifi-update" class="btn">Update Through The Unit's WiFi</button>
+      </div>
+      <pre id="wifi-log" class="log hidden"></pre>
+
+      <h3>Other Ways</h3>
+      <ul class="links" id="manual-links"></ul>
+    </section>
+  </section>
+</main>
+
+<footer>
+  <span>SparkPNT Device Support <span id="site-version"></span></span>
+  <span>Runs entirely in your browser. Questions: <a id="footer-mail" href="#">support</a></span>
+</footer>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

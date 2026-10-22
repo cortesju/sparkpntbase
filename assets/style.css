@@ -1,0 +1,96 @@
+/* SparkPNT-derived design system - see ../design-system.md */
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Roboto:wght@400;500;700&display=swap');
+
+:root {
+  --accent: #E0311D;
+  --accent-dark: #b52717;
+  --text: #333333;
+  --heading: #171717;
+  --bg: #ffffff;
+  --highlight: #FFDDBF;
+  --price-blue: #0F4269;
+  --teal: #108474;
+  --success-text: #4D7C0F;
+  --success-bg: #F7FEE7;
+  --error-text: #BE123C;
+  --error-bg: #FFF1F2;
+  --info-text: #B45309;
+  --info-bg: #FFFBEB;
+  --border: rgba(51,51,51,.1);
+  --card-radius: clamp(0.625rem, 1.053vw, 1.25rem);
+  --shadow: 0 4px 24px rgba(51,51,51,.10);
+  --anim: .5s cubic-bezier(.3, 1, .3, 1);
+  --font-heading: 'Archivo', sans-serif;
+  --font-body: 'Roboto', sans-serif;
+  --page-pad: clamp(1.25rem, 4vw, 3rem);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--font-body);
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.5;
+}
+
+h1, h2, h3, h4 { font-family: var(--font-heading); font-weight: 600; color: var(--heading); line-height: 1.1; }
+
+a { color: var(--price-blue); }
+
+.container { max-width: 1200px; margin: 0 auto; padding: 0 var(--page-pad); }
+
+/* Header */
+.site-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1rem var(--page-pad);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; background: rgba(255,255,255,.95); backdrop-filter: blur(8px); z-index: 50;
+}
+.brand { font-family: var(--font-heading); font-weight: 700; font-size: 1.25rem; color: var(--heading); text-decoration: none; display: flex; align-items: center; gap: .5rem; }
+.brand .spark { color: var(--accent); }
+.site-nav { display: flex; gap: .25rem; flex-wrap: wrap; }
+.site-nav a {
+  font-weight: 500; font-size: .9rem; text-decoration: none; color: var(--text);
+  padding: .45rem .9rem; border-radius: 999px; transition: background var(--anim);
+}
+.site-nav a:hover { background: var(--highlight); color: var(--heading); }
+.site-nav a.active { background: var(--heading); color: #fff; }
+
+/* Hero */
+.hero { padding: clamp(3rem, 8vw, 6rem) var(--page-pad); }
+.hero .kicker { font-size: .8rem; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; color: var(--accent); margin-bottom: 1rem; }
+.hero h1 { font-size: clamp(2rem, 5vw, 3.5rem); max-width: 18ch; margin-bottom: 1.25rem; }
+.hero p { font-size: clamp(1rem, 1.5vw, 1.2rem); max-width: 60ch; }
+
+/* Buttons */
+.btn {
+  display: inline-block; font-family: var(--font-body); font-weight: 500; font-size: 1rem;
+  padding: .8rem 1.75rem; border-radius: 999px; cursor: pointer; text-decoration: none;
+  border: 2px solid transparent; transition: all .3s cubic-bezier(.7,0,.3,1);
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-dark); }
+.btn-outline { background: transparent; color: var(--heading); border-color: var(--heading); }
+.btn-outline:hover { background: var(--heading); color: #fff; }
+.btn-sm { padding: .45rem 1.1rem; font-size: .85rem; }
+
+/* Cards */
+.card {
+  background: #fff; border-radius: var(--card-radius); box-shadow: var(--shadow);
+  padding: clamp(1.25rem, 2.5vw, 2rem); transition: transform var(--anim), box-shadow var(--anim);
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 32px rgba(51,51,51,.14); }
+
+.tag { display: inline-block; font-size: .7rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: .25rem .7rem; border-radius: 999px; }
+.tag-live { background: var(--success-bg); color: var(--success-text); }
+.tag-soon { background: var(--info-bg); color: var(--info-text); }
+.tag-accent { background: var(--highlight); color: var(--heading); }
+
+/* Footer */
+.site-footer { border-top: 1px solid var(--border); padding: 2rem var(--page-pad); margin-top: 4rem; font-size: .85rem; color: #777; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+.site-footer a { color: #777; }
+
+@media (max-width: 640px) {
+  .site-header { flex-direction: column; gap: .75rem; }
+}

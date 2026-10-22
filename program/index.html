@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Field Trial & Field Corps - PNT Lab</title>
+<link rel="stylesheet" href="../assets/style.css?v=1786981062">
+<style>
+  main { max-width: 1150px; margin: 0 auto; padding: 0 var(--page-pad) 3rem; }
+
+  /* Program tabs (mirrors sparkpnt.com toggle patterns) */
+  .prog-tabs { display: inline-flex; background: rgba(51,51,51,.06); border-radius: 999px; padding: .3rem; gap: .2rem; flex-wrap: wrap; }
+  .prog-tabs button { border: none; background: transparent; font-family: var(--font-body); font-weight: 500; font-size: .95rem; padding: .55rem 1.4rem; border-radius: 999px; cursor: pointer; color: var(--text); transition: all .3s cubic-bezier(.7,0,.3,1); }
+  .prog-tabs button.active { background: var(--heading); color: #fff; }
+
+  body[data-tab="trial"] .tab-uni, body[data-tab="trial"] .tab-corps { display: none; }
+  body[data-tab="uni"] .tab-trial, body[data-tab="uni"] .tab-corps { display: none; }
+  body[data-tab="corps"] .tab-trial, body[data-tab="corps"] .tab-uni { display: none; }
+
+  section.block { margin: 2.5rem 0 0; }
+  section.block > h2 { font-size: clamp(1.4rem, 2.5vw, 1.9rem); margin-bottom: .4rem; }
+  section.block > .sub { color: #777; margin-bottom: 1.2rem; max-width: 70ch; }
+  .kicker-sm { font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; color: var(--accent); margin-bottom: .6rem; }
+
+  /* Steps */
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1.2rem; counter-reset: step; }
+  .step-card { counter-increment: step; position: relative; padding-top: 3.2rem; }
+  .step-card::before { content: counter(step); position: absolute; top: 1.1rem; left: 1.5rem; width: 2rem; height: 2rem; border-radius: 999px; background: var(--accent); color: #fff; font-family: var(--font-heading); font-weight: 600; display: flex; align-items: center; justify-content: center; }
+  .step-card h3 { font-size: 1.05rem; margin-bottom: .3rem; }
+  .step-card p { font-size: .88rem; }
+
+  /* Trial math band (peach, sparkpnt highlight style) */
+  .math-band { background: var(--highlight); border-radius: var(--card-radius); padding: clamp(1.4rem, 3.5vw, 2.4rem); display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1.2rem; }
+  .math-band .item .n { font-family: var(--font-heading); font-weight: 600; font-size: 1.7rem; color: var(--heading); }
+  .math-band .item .l { font-size: .84rem; }
+
+  /* Trial product cards */
+  .trial-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.4rem; }
+  .trial-card h3 { font-size: 1.3rem; }
+  .trial-card .price-row { display: flex; align-items: baseline; gap: .6rem; margin: .4rem 0; }
+  .trial-card .fee { font-family: var(--font-heading); font-weight: 600; font-size: 1.5rem; color: var(--price-blue); }
+  .trial-card .dep { font-size: .8rem; color: #999; }
+  .trial-card ul { font-size: .87rem; padding-left: 1.1rem; margin: .5rem 0 .8rem; }
+  .trial-card li { margin-bottom: .3rem; }
+
+  /* Shopify-style form (62px borderless filled inputs, 6px radius) */
+  .q-form { background: #fff; border-radius: var(--card-radius); box-shadow: var(--shadow); padding: clamp(1.4rem, 3.5vw, 2.4rem); max-width: 720px; }
+  .q-form h3 { margin-bottom: .3rem; }
+  .q-form .note { font-size: .85rem; color: #777; margin-bottom: 1.2rem; }
+  .field { margin-bottom: 1rem; }
+  .field label { display: block; font-size: .8rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #777; margin-bottom: .35rem; }
+  .field input, .field select, .field textarea {
+    width: 100%; border: none; background: rgba(23,23,23,.035); border-radius: 6px;
+    padding: 1.1rem 1.4rem; font-family: var(--font-body); font-size: 1rem; color: var(--heading);
+    outline: 2px solid transparent; transition: outline .2s;
+  }
+  .field textarea { min-height: 90px; resize: vertical; }
+  .field input:focus, .field select:focus, .field textarea:focus { outline-color: rgb(11 97 205); }
+  .field .hint { font-size: .78rem; color: #999; margin-top: .3rem; }
+  .form-done { display: none; background: var(--success-bg); color: var(--success-text); border-radius: .7rem; padding: 1.1rem 1.3rem; font-size: .95rem; margin-top: 1rem; }
+  .form-done.on { display: block; }
+
+  /* Dark band (sparkpnt #171717 section pattern) - Field Corps */
+  .dark-band { background: #171717; color: #fff; border-radius: var(--card-radius); padding: clamp(1.6rem, 4vw, 3rem); }
+  .dark-band h2, .dark-band h3 { color: #fff; }
+  .dark-band .kicker-sm { color: var(--highlight); }
+  .dark-band p { color: rgba(255,255,255,.8); }
+  .dark-band .track { background: #1F1F1F; border-radius: .8rem; padding: 1.2rem 1.4rem; }
+  .dark-band .track h3 { font-size: 1.05rem; margin-bottom: .35rem; }
+  .dark-band .track p, .dark-band .track li { font-size: .87rem; color: rgba(255,255,255,.75); }
+  .dark-band .track ul { padding-left: 1.1rem; margin-top: .4rem; }
+  .dark-band .tracks { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-top: 1.4rem; }
+
+  /* give/get two-col */
+  .givegets { display: grid; grid-template-columns: 1fr 1fr; gap: 1.4rem; }
+  @media (max-width: 700px) { .givegets { grid-template-columns: 1fr; } }
+  .giveget h3 { font-size: 1.05rem; margin-bottom: .5rem; }
+  .giveget ul { font-size: .89rem; padding-left: 1.1rem; }
+  .giveget li { margin-bottom: .35rem; }
+
+  /* FAQ */
+  details.faq { background: #FAFAFA; border-radius: .7rem; padding: 1rem 1.3rem; margin-bottom: .7rem; }
+  details.faq summary { font-weight: 500; color: var(--heading); cursor: pointer; }
+  details.faq p { font-size: .9rem; margin-top: .6rem; }
+
+  .mock-note { background: var(--info-bg); color: var(--info-text); border-radius: .6rem; padding: .6rem 1rem; font-size: .8rem; display: inline-block; margin-bottom: 1rem; }
+</style>
+<!-- PNT Lab public build 2026-10-22. Client tracker and outreach research are not part of this site. -->
+</head>
+<body data-tab="trial">
+
+<header class="site-header">
+  <a class="brand" href="../index.html"><span class="spark">⌖</span> PNT Lab</a>
+  <nav class="site-nav">
+    <a href="../index.html">Home</a>
+    <a href="../study/index.html">Study Tracker</a>
+    <a href="../products/index.html">Product Guide</a>
+    <a href="../atlas/index.html">RTK Atlas</a>
+    <a href="index.html" class="active">Trial &amp; Corps</a>
+    <a href="../support/index.html">Device Support</a>
+  </nav>
+</header>
+
+<main>
+  <section class="hero" style="padding-left:0;padding-right:0;padding-bottom:1.2rem;">
+    <span class="mock-note">Interface mockup - how the program from the research would look on sparkpnt.com. Forms are simulated.</span>
+    <div class="kicker">SparkPNT outreach programs</div>
+    <h1>Try it in your field, not our showroom.</h1>
+    <p>Thirty real field days with the corrections already set up before it ships. Pick your path:</p>
+    <div style="margin-top:1.4rem">
+      <div class="prog-tabs">
+        <button data-tab="trial" class="active">30-Day Field Trial</button>
+        <button data-tab="uni">Universities &amp; Education</button>
+        <button data-tab="corps">Field Corps Ambassadors</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= TRIAL TAB ================= -->
+  <div class="tab-trial">
+    <section class="block">
+      <h2>How it works.</h2>
+      <div class="sub">One page of paperwork, a $149 fee, thirty days. Keep the unit and the fee counts toward the price; return it and you owe nothing more.</div>
+      <div class="steps">
+        <div class="card step-card"><h3>Request your trial</h3><p>Five quick questions about your project (below). Specific answers ship same-day - the fleet stays busy, so tell us your real accuracy spec.</p></div>
+        <div class="card step-card"><h3>Pay the $149 trial fee and sign one page</h3><p>$149 covers shipping both ways, one month of corrections already set up on the unit, and a 20-minute onboarding call. The device ships under a one-page trial agreement; you are not charged for it up front.</p></div>
+        <div class="card step-card"><h3>First fix in 10 minutes</h3><p>Credentials taped inside the lid, SW Maps setup card included, already registered on the network. Unbox → green dot, not a scavenger hunt.</p></div>
+        <div class="card step-card"><h3>Keep it or send it back</h3><p>Day 25 we ask. Keep it: we send the invoice with your $149 already credited. Return it: prepaid label's in the case and you owe nothing more.</p></div>
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="math-band">
+        <div class="item"><div class="n">30 days</div><div class="l">Real field time - the industry standard trial is one week. Nobody learns RTK in a week.</div></div>
+        <div class="item"><div class="n">$149</div><div class="l">Trial fee - fully credited toward any purchase within 60 days. For a real buyer, the trial is effectively free.</div></div>
+        <div class="item"><div class="n">10 min</div><div class="l">To your first RTK fix, corrections included - the onboarding is the tutorial.</div></div>
+        <div class="item"><div class="n">$0</div><div class="l">Charged for the device up front. One signed page covers the trial; a unit that never comes back converts to a purchase at day 45.</div></div>
+      </div>
+    </section>
+
+    <section class="block">
+      <h2>Choose your trial kit.</h2>
+      <div class="trial-grid">
+        <div class="card trial-card">
+          <span class="tag tag-accent">Most popular</span>
+          <h3>TX2 Field Trial</h3>
+          <div class="price-row"><span class="fee">$149</span><span class="dep">device ships on a one-page trial agreement</span></div>
+          <ul>
+            <li>Handheld rover, 50+ hr battery, works with your iPhone or Android</li>
+            <li>One month PointPerfect Flex included, pre-registered</li>
+            <li>SW Maps &amp; ArcGIS Field Maps setup cards in the case</li>
+          </ul>
+          <a class="btn btn-primary btn-sm" href="#request">Request this trial</a>
+        </div>
+        <div class="card trial-card">
+          <h3>Facet FP Base + Rover Trial</h3>
+          <div class="price-row"><span class="fee">$249</span><span class="dep">both units ship on a one-page trial agreement</span></div>
+          <ul>
+            <li>Two FPLs: your own centimeter system, no cell service needed</li>
+            <li>Radio-linked out of the box - matched channels, tripod adapter included</li>
+            <li>The setup for farms, ranches, and dead-zone sites</li>
+          </ul>
+          <a class="btn btn-primary btn-sm" href="#request">Request this trial</a>
+        </div>
+        <div class="card trial-card">
+          <h3>Institutional trial (Net-30)</h3>
+          <div class="price-row"><span class="fee">PO</span><span class="dep">department-invoiced, no card required</span></div>
+          <ul>
+            <li>For universities, government, and big accounts that can't card $1,500</li>
+            <li>One-page Equipment Trial Agreement - the institution signs, not the individual</li>
+            <li>Unreturned by day 45 converts to a standard invoice, stated plainly up front</li>
+          </ul>
+          <a class="btn btn-outline btn-sm" href="#request">Start the paperwork</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="request">
+      <h2>Request a trial.</h2>
+      <div class="sub">The same five questions we'd ask on a call. Real projects answer these in two minutes.</div>
+      <form class="q-form" id="trial-form">
+        <div class="field"><label>What are you measuring or staking, and what accuracy does the job need?</label>
+          <input type="text" required placeholder="e.g. Stormwater inlets for MS4 compliance, need better than 10 cm">
+          <div class="hint">A number helps (10 cm, 1 m, survey-grade).</div></div>
+        <div class="field"><label>Where will you use it?</label>
+          <input type="text" required placeholder="e.g. Larimer County, Colorado - good LTE except the north parcel">
+          <div class="hint">State and cell signal at the site. Some states have free corrections networks; we set up your trial with the right one.</div></div>
+        <div class="field"><label>What software will you collect in, and on iPhone or Android?</label>
+          <input type="text" required placeholder="e.g. ArcGIS Field Maps on iPhone"></div>
+        <div class="field"><label>If the trial works, how many units and when?</label>
+          <input type="text" required placeholder="e.g. 3 units this fiscal year"></div>
+        <div class="field"><label>Company and your role</label>
+          <input type="text" required placeholder="e.g. City of Golden Public Works - GIS technician"></div>
+        <div class="field"><label>What are you using today? (optional)</label>
+          <input type="text" placeholder="e.g. a rented survey unit, a phone GPS, nothing yet"></div>
+        <div class="field"><label>Email</label>
+          <input type="email" required placeholder="you@organization.com"></div>
+        <button class="btn btn-primary" type="submit">Submit trial request</button>
+        <div class="form-done" id="trial-done"><strong>Request received (simulated).</strong> In the real flow: specific answers get approved same-day, the unit ships ready to measure, and your onboarding call link arrives with the tracking number.</div>
+      </form>
+    </section>
+
+    <section class="block">
+      <h2>The fine print.</h2>
+      <details class="faq"><summary>Why is there a trial fee at all?</summary><p>It covers real costs - shipping both ways, a month of corrections, and your onboarding call - and it's fully credited toward any purchase within 60 days. It also keeps the trial fleet available for people with real projects instead of tire-kickers, without us having to judge anyone.</p></details>
+      <details class="faq"><summary>Do I pay for the device up front?</summary><p>No. You pay the $149 fee, and the device ships under a one-page agreement: SparkPNT keeps ownership during the trial, and a unit that is not returned by day 45 converts to a purchase and gets invoiced. No card holds, no large charge sitting on your statement.</p></details>
+      <details class="faq"><summary>What counts as "working condition"?</summary><p>Working unit, complete kit (the checklist is printed inside the case lid), normal field wear absolutely fine. These units go to the field - we expect dirt.</p></details>
+      <details class="faq"><summary>What happens if I forget to return it?</summary><p>Day 35 we nudge. Day 45 the trial converts to a purchase per the agreement - which some people choose on purpose. No collections, no surprises.</p></details>
+      <details class="faq"><summary>Can I trial outside the US?</summary><p>Not yet - the radio units are FCC 915 MHz and export paperwork would eat the trial window. International purchases with the standard 30-day return policy work today.</p></details>
+    </section>
+  </div>
+
+  <!-- ================= UNIVERSITY TAB ================= -->
+  <div class="tab-uni">
+    <section class="block">
+      <div class="kicker-sm">Seed kits + curriculum</div>
+      <h2>Hardware is the easy half. We ship the course too.</h2>
+      <div class="sub">A department gets a TX2 plus an FPL base/rover pair on a renewable 12-month MOU - with the teaching materials that make it land in an actual syllabus.</div>
+      <div class="givegets">
+        <div class="card giveget">
+          <h3>Your department gets</h3>
+          <ul>
+            <li>TX2 + FPL base/rover seed kit, 12-month renewable loan, department-liable (students never sign for hardware)</li>
+            <li><strong>The curriculum pack:</strong> lab exercises (base setup, Survey-In, NTRIP, the datum exercise, an accuracy-verification lab), slide deck, instructor notes</li>
+            <li>15% student discount code &amp; capstone hardware sponsorships</li>
+            <li>A named engineering contact - not a ticket queue</li>
+          </ul>
+        </div>
+        <div class="card giveget">
+          <h3>We ask for</h3>
+          <ul>
+            <li>Use in at least one course per year</li>
+            <li>One student project showcase we can publish</li>
+            <li>A named faculty sponsor of record</li>
+            <li>Honest feedback - your students' confusion is our docs roadmap</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="math-band">
+        <div class="item"><div class="n">Campus RTK Challenge</div><div class="l">Best student mapping project each spring wins the demo unit they used. Portfolio-hungry evangelists, made annually.</div></div>
+        <div class="item"><div class="n">SparkPNT Certified</div><div class="l">Students finish the training modules, earn a shareable badge - proof of competence recruiters can see.</div></div>
+        <div class="item"><div class="n">Field-day edition</div><div class="l">The same kit + materials, adapted for county extension agents and ag field days.</div></div>
+      </div>
+    </section>
+
+    <section class="block">
+      <h2>Bring it to your campus.</h2>
+      <form class="q-form" id="uni-form">
+        <div class="field"><label>Institution &amp; department</label><input type="text" required placeholder="e.g. Front Range CC - Geomatics"></div>
+        <div class="field"><label>Faculty sponsor</label><input type="text" required placeholder="Name & title"></div>
+        <div class="field"><label>Which course(s) would use the kit?</label><input type="text" required placeholder="e.g. SUR 201 Field Methods, spring semester"></div>
+        <div class="field"><label>Roughly how many students per year?</label><input type="text" required placeholder="e.g. 25"></div>
+        <div class="field"><label>Email</label><input type="email" required placeholder="you@university.edu"></div>
+        <button class="btn btn-primary" type="submit">Request a seed kit</button>
+        <div class="form-done" id="uni-done"><strong>Request received (simulated).</strong> Real flow: we send the one-page MOU template and the curriculum pack preview; warmest departments ship first.</div>
+      </form>
+    </section>
+  </div>
+
+  <!-- ================= FIELD CORPS TAB ================= -->
+  <div class="tab-corps">
+    <section class="block">
+      <div class="dark-band">
+        <div class="kicker-sm">SparkPNT Field Corps</div>
+        <h2>Small corps. Real work. No logo-wearers.</h2>
+        <p style="max-width:65ch">Six to twelve practitioners who do the work publicly - surveyors, GIS techs, ag consultants, drone mappers. A 12-month renewable device loan, early firmware, a direct engineering line, and a referral code your audience actually thanks you for. Renewal is earned by activity, never by follower count.</p>
+        <div class="tracks">
+          <div class="track"><h3>Field Ambassadors</h3><p>Working practitioners with a public footprint - a channel, an active LinkedIn, forum reputation.</p><ul><li>12-month renewable loaner</li><li>Beta firmware + engineering line</li><li>10% audience code, conference support</li></ul></div>
+          <div class="track"><h3>Campus Ambassadors</h3><p>Professors and programs - structurally a partnership, personally an ambassador.</p><ul><li>Seed kit + curriculum pack</li><li>Student showcase we publish</li><li>Capstone sponsorships</li></ul></div>
+          <div class="track"><h3>Industry Champions</h3><p>Two or three genuinely respected figures - a licensed PLS, a GIS educator, an agronomist. Hand-picked, higher touch.</p><ul><li>Co-produced content</li><li>Product advisory</li><li>Webinar honoraria</li></ul></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block">
+      <h2>What we look for.</h2>
+      <div class="sub">Scored on five things: real engaged reach (800 surveyors who comment beat 50k generic followers), workflow authenticity, communication quality, coverage of a vertical we lack, and temperament. One public flame war is a pass.</div>
+      <form class="q-form" id="corps-form">
+        <div class="field"><label>Name &amp; what you do</label><input type="text" required placeholder="e.g. PLS in Colorado, YouTube channel on modern survey gear"></div>
+        <div class="field"><label>Where can we see your public work?</label><input type="text" required placeholder="Links: channel, LinkedIn, forum profile…"><div class="hint">We'll watch two pieces and ask: would we be proud to be in them?</div></div>
+        <div class="field"><label>Which vertical / region do you cover?</label><input type="text" required placeholder="e.g. precision ag in the Midwest, municipal GIS in the Southeast…"></div>
+        <div class="field"><label>What would you make in the first quarter?</label><textarea required placeholder="One substantial piece per quarter is the commitment - tell us the first one"></textarea></div>
+        <div class="field"><label>Email</label><input type="email" required placeholder="you@yourdomain.com"></div>
+        <button class="btn btn-primary" type="submit">Apply to the Field Corps</button>
+        <div class="form-done" id="corps-done"><strong>Application received (simulated).</strong> Real flow: a 30-minute video call, scored on the five criteria; year one caps at 12 people so a pass now isn't a pass forever.</div>
+      </form>
+    </section>
+
+    <section class="block">
+      <h2>Questions we get.</h2>
+      <details class="faq"><summary>Do I get to keep the device?</summary><p>It's a loan that renews every 12 months as long as the commitments were met (one substantial piece per quarter, one deep dive per year, FTC-compliant disclosure). Go quiet and you get a friendly off-boarding: return it, or buy it at 40% off. Most buy - that's fine by everyone.</p></details>
+      <details class="faq"><summary>Do you review my content before I post?</summary><p>We offer a courtesy fact-check line and never require pre-approval - required review kills the authenticity that makes this worth anything. If something's technically wrong, we'll correct it publicly with kindness.</p></details>
+      <details class="faq"><summary>Can I trash the competition?</summary><p>No. Respectful co-existence is in the agreement. Emlid and the rest make good instruments; we differentiate on openness, repairability, and price - not mud.</p></details>
+      <details class="faq"><summary>What does it pay?</summary><p>Hardware, access, and attribution - plus 5% store credit on referral-code sales (pending final program terms). It's enthusiast-flavored on purpose. If you need a retainer, the Industry Champion track is the conversation to have.</p></details>
+    </section>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <span>PNT Lab - program interface mockup for review with the product lead. Forms simulate; no data is sent.</span>
+  <span>Mechanics: · doc 05 v2</span>
+</footer>
+
+<script>
+(function () {
+  // Tab switching
+  document.querySelectorAll(".prog-tabs button").forEach(b => b.addEventListener("click", () => {
+    document.querySelectorAll(".prog-tabs button").forEach(x => x.classList.remove("active"));
+    b.classList.add("active");
+    document.body.dataset.tab = b.dataset.tab;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }));
+  // Simulated form submits
+  [["trial-form","trial-done"],["uni-form","uni-done"],["corps-form","corps-done"]].forEach(([f,d]) => {
+    document.getElementById(f).addEventListener("submit", e => {
+      e.preventDefault();
+      document.getElementById(d).classList.add("on");
+      document.getElementById(d).scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  });
+})();
+</script>
+</body>
+</html>

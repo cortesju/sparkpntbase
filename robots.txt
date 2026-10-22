@@ -1,0 +1,4 @@
+# This is a personal study project styled after sparkpnt.com, not the official site,
+# so it stays out of search results. Delete this file to allow indexing.
+User-agent: *
+Disallow: /
