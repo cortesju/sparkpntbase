@@ -1,7 +1,8 @@
 // Talks to the RTK Everywhere firmware over its USB console:
 // the serial configuration menus plus the $SP command line.
 
-import { CONFIG } from './config.js?v=1792701697';
+import { CONFIG } from './config.js?v=1793640457';
+import { parseNmea } from './ble.js?v=1793640457';
 
 export function spFrame(body) {
   let cs = 0;
@@ -76,9 +77,15 @@ export class Receiver {
     this.busy = false;
     this.loraTimeoutOriginal = null;
     this.where = 'nowhere yet'; // what the unit last printed about its menu state
+    // Over Bluetooth the unit takes $SP commands directly: no menus, no command mode to enter.
+    this.direct = link.kind === 'ble';
+    this.baseMode = false; // over Bluetooth: how to label the position sentences
+    this._gstAccuracy = null;
     this._logHandlers = new Set();
     link.onLine((l) => this._onLine(l));
     link.onRaw(() => this._checkPartial());
+    if (link.onNmea) link.onNmea((l) => this._onNmea(l));
+    if (this.direct) { this.where = 'Bluetooth Command Channel'; this.inCli = true; }
   }
 
   onLog(fn) { this._logHandlers.add(fn); return () => this._logHandlers.delete(fn); }
@@ -136,9 +143,20 @@ export class Receiver {
     if (this.live.length > 400) this.live.splice(0, this.live.length - 400);
   }
 
+  // Position sentences from the Bluetooth data channel stand in for the USB status line.
+  _onNmea(line) {
+    const p = parseNmea(line);
+    if (!p) return;
+    if (p.kind === 'gst') { this._gstAccuracy = p.accuracy; return; }
+    if (this.baseMode) this.live.push({ t: Date.now(), kind: 'base', caster: false, siv: p.siv, state: 'BASE' });
+    else this.live.push({ t: Date.now(), kind: 'rover', units: 'm', accuracy: this._gstAccuracy, beyond: false, siv: p.siv, state: p.state, quality: p.quality });
+    if (this.live.length > 400) this.live.splice(0, this.live.length - 400);
+  }
+
   // Where the unit is, read from its own prints: a menu title, command mode, or the periodic
   // status lines that only appear while the menu is closed.
   _parseWhere(line) {
+    if (this.direct) return;
     let m;
     if ((m = /^Menu: (.+?)\s*$/.exec(line))) this.where = m[1] === 'Main' ? 'Main Menu' : m[1];
     else if (/^COMMAND MODE/.test(line)) this.where = 'Command Mode';
@@ -249,6 +267,7 @@ export class Receiver {
   }
 
   async exitMenu() {
+    if (this.direct) return;
     if (this.inCli) await this.exitCli();
     if (this.inMenu) {
       await this.send('x\r');
@@ -293,6 +312,7 @@ export class Receiver {
   // ---- Command line ------------------------------------------------------
 
   async enterCli() {
+    if (this.direct) { this.inCli = true; return; }
     if (this.inCli) return;
     // "+" only works from the main menu, so get there first from wherever the unit is.
     if (this.inMenu && this.where === 'Main Menu') { /* already there */ } else await this.goMain();
@@ -312,6 +332,7 @@ export class Receiver {
   }
 
   async exitCli() {
+    if (this.direct) return;
     if (!this.inCli) return;
     for (let attempt = 0; attempt < 2; attempt++) {
       const from = this.log.length;
@@ -364,7 +385,7 @@ export class Receiver {
     const r = await this.cli(`SPEXE,${cmd}`, new RegExp(`^\\$SPEXE,${cmd},(.*)\\*[0-9A-Fa-f]{2}$`), timeout);
     const p = parseReply(r.match[1]);
     if (p.error) throw new Error(`${cmd}: ${p.error}`);
-    if (cmd === 'REBOOT' || cmd === 'FACTORYRESET') { this.inCli = false; this.inMenu = false; }
+    if ((cmd === 'REBOOT' || cmd === 'FACTORYRESET') && !this.direct) { this.inCli = false; this.inMenu = false; }
     return p;
   }
 
@@ -476,6 +497,70 @@ export class Receiver {
     await this.exitMenu();
   }
 
+  // ---- Full check over Bluetooth --------------------------------------------
+  // No menus: identity, versions and settings come from $SPGET; the position from NMEA.
+  // What only the System menu prints (uptime, resets, NTRIP state, microSD, parser counts)
+  // is simply not read.
+
+  async bleCheck(progress = () => {}) {
+    const snap = {
+      startedAt: new Date().toISOString(),
+      port: this.link.info(),
+      linkKind: this.link.sim ? 'sim' : 'ble',
+      via: 'ble',
+      header: null, system: null, gnss: null, firmwareMenu: null,
+      cli: {}, changed: null, live: [], errors: [],
+      rebootSeen: false, notRead: ['uptime and restart count', 'NTRIP client state', 'microSD card', 'parser counts'],
+    };
+    const tryStep = async (label, fn) => {
+      progress(label);
+      try { return await fn(); } catch (e) { snap.errors.push(`${label}: ${e.message}`); return null; }
+    };
+    // First answer proves the command channel works; the firmware ignores a command sent
+    // while it is busy, so give the first one a second chance.
+    progress('Asking the unit over Bluetooth');
+    let name = await this.get('deviceName');
+    if (name.error === 'No answer') { await sleep(800); name = await this.get('deviceName'); }
+    if (name.error === 'No answer') throw new NoAnswerError('The unit did not answer over Bluetooth');
+    snap.cli.deviceName = name;
+
+    await tryStep('Reading status and versions', async () => {
+      for (const key of ['espFirmwareVersion', 'subsystemVersions', 'gnssFirmwareVersion', 'gnssModuleInfo', 'setState', 'lastState', 'batteryLevelPercent', 'batteryVoltage', 'bluetoothRadioType', 'deviceId', 'bluetoothId']) {
+        snap.cli[key] = await this.get(key);
+      }
+      const STATES = { 0: 'Rover', 1: 'Base', 2: 'NTP', 3: 'Base Caster', 4: 'Base Assist' };
+      const st = snap.cli.setState?.value ?? snap.cli.lastState?.value;
+      const mode = st !== undefined && st !== '' && !Number.isNaN(+st) ? STATES[+st] || null : null;
+      this.baseMode = /base/i.test(mode || '');
+      const btName = this.link.info().bluetoothName || null;
+      const brand = /^SparkFun/i.test(btName || '') ? 'SparkFun' : 'SparkPNT';
+      const versionRaw = snap.cli.espFirmwareVersion?.value || null;
+      snap.header = {
+        raw: [], brand, rtkPrefix: brand === 'SparkFun',
+        product: (name.value || '').replace(/^(SparkPNT|SparkFun)\s+(RTK\s+)?/i, '') || null,
+        version: versionRaw ? (/^[vd]/.test(versionRaw) ? versionRaw : `v${versionRaw}`) : null,
+        mode, bluetooth: 'Low Energy', bluetoothName: btName, menuItems: [],
+      };
+      const gv = snap.cli.gnssFirmwareVersion?.value;
+      snap.gnss = { raw: [], versionLine: gv || null, moduleId: snap.cli.gnssModuleInfo?.value || null, chip: chipFromText(snap.cli.gnssModuleInfo?.value || snap.cli.subsystemVersions?.value || ''), online: true };
+    });
+    await tryStep('Reading settings', async () => {
+      for (const [key] of CLI_KEYS) {
+        if (snap.cli[key]) continue;
+        if (key === 'loraSerialInteractionTimeout' || key === 'usbSerialBaud' || key === 'enableGnssToUsbSerial') continue; // USB only
+        snap.cli[key] = await this.get(key);
+      }
+      snap.changed = await this.changedSettings();
+    });
+    const liveFrom = this.live.length;
+    progress(`Watching the position for ${CONFIG.liveWatchSeconds} seconds`);
+    await sleep(CONFIG.liveWatchSeconds * 1000);
+    snap.live = this.live.slice(liveFrom);
+    snap.nmeaSeen = this.link.nmeaLines || 0;
+    snap.finishedAt = new Date().toISOString();
+    return snap;
+  }
+
   // ---- Full check ----------------------------------------------------------
 
   async fullCheck(progress = () => {}) {
@@ -483,6 +568,7 @@ export class Receiver {
       startedAt: new Date().toISOString(),
       port: this.link.info(),
       linkKind: this.link.kind,
+      via: 'usb',
       header: null, system: null, gnss: null, firmwareMenu: null,
       cli: {}, changed: null, live: [], errors: [],
       rebootSeen: this.rebootSeen,
@@ -520,7 +606,9 @@ export class Receiver {
 
 export function parseReply(payload) {
   // payload is everything after "$SPGET,name," up to "*CS"
+  // SPGET/SPSET errors keep an empty value field (",,ERROR,msg"); SPEXE errors do not ("ERROR,msg").
   if (payload.startsWith(',ERROR,')) return { error: payload.slice(7) };
+  if (payload.startsWith('ERROR,')) return { error: payload.slice(6) };
   let v = payload;
   if (v.endsWith(',OK')) v = v.slice(0, -3);
   if (v.startsWith('"') && v.endsWith('"')) v = v.slice(1, -1).replace(/\\(.)/g, '$1');

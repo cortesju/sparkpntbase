@@ -1,23 +1,26 @@
 // Page wiring: connect, check, console, report, firmware.
 
-import { CONFIG } from './config.js?v=1792701697';
-import { SerialLink } from './link.js?v=1792701697';
-import { SimLink } from './sim.js?v=1792701697';
-import { Receiver, NoAnswerError, sleep } from './receiver.js?v=1792701697';
-import { runChecks, stateWord } from './checks.js?v=1792701697';
+import { CONFIG } from './config.js?v=1793640457';
+import { SerialLink } from './link.js?v=1793640457';
+import { BleLink } from './ble.js?v=1793640457';
+import { SimLink } from './sim.js?v=1793640457';
+import { Receiver, NoAnswerError, sleep, spFrame } from './receiver.js?v=1793640457';
+import { runChecks, stateWord } from './checks.js?v=1793640457';
 import {
   loadFirmwareList, latestMain, latestFor, rowVersion, fileUrl, downloadBinary, crc32, flashMain,
   installedVersions, mainVersionOf, compareMain, compareSubsystem,
-} from './firmware.js?v=1792701697';
-import { buildReport, buildReportHtml, reportFileName, downloadFile, emailSummary, mailtoUrl } from './report.js?v=1792701697';
+} from './firmware.js?v=1793640457';
+import { buildReport, buildReportHtml, reportFileName, downloadFile, emailSummary, mailtoUrl } from './report.js?v=1793640457';
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 
 const state = {
   link: null, rx: null, port: null, snap: null, findings: [], fw: null, fwError: null,
-  busy: false, tab: 'check', liveTimer: null, sim: null,
+  busy: false, tab: 'check', liveTimer: null, sim: null, expectingRestart: false,
 };
+
+const isBle = () => !!state.rx?.direct;
 
 // ---------------------------------------------------------------------------
 // Setup
@@ -32,21 +35,34 @@ function init() {
 
   const params = new URLSearchParams(location.search);
   state.sim = params.get('sim');
+  const bleOk = BleLink.supported() || !!state.sim;
 
   if (!SerialLink.supported() && !state.sim) {
     const h = $('#browser-hint');
     h.classList.remove('hidden');
     const phone = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
-    h.innerHTML = phone
-      ? 'Phones and tablets cannot open USB serial ports, so this page needs a laptop or desktop computer running <b>Chrome</b> or <b>Edge</b>.'
-      : 'This browser cannot open USB ports. Please use <b>Chrome</b> or <b>Edge</b> on a computer (Windows, macOS, Linux or ChromeOS).';
+    if (bleOk) {
+      h.innerHTML = phone
+        ? 'Phones cannot open USB ports, but this browser can connect over <b>Bluetooth</b>: use Connect Over Bluetooth. The cable needs a computer running Chrome or Edge.'
+        : 'This browser cannot open USB ports, but it can connect over <b>Bluetooth</b>: use Connect Over Bluetooth. For the cable use <b>Chrome</b> or <b>Edge</b> on a computer.';
+    } else {
+      h.innerHTML = phone
+        ? 'Phones and tablets cannot open USB serial ports, so this page needs a laptop or desktop computer running <b>Chrome</b> or <b>Edge</b>. Android Chrome can connect over Bluetooth.'
+        : 'This browser cannot open USB ports or Bluetooth. Please use <b>Chrome</b> or <b>Edge</b> on a computer (Windows, macOS, Linux or ChromeOS).';
+    }
     $('#btn-connect').disabled = true;
   }
   if (state.sim) {
     $('#btn-connect').textContent = `Connect The Simulated ${state.sim.toUpperCase()}`;
+    $('#btn-connect-ble').textContent = `Simulated ${state.sim.toUpperCase()} Over Bluetooth`;
+  }
+  if (bleOk) {
+    $('#btn-connect-ble').classList.remove('hidden');
+    $('#ble-hint').classList.remove('hidden');
   }
 
   $('#btn-connect').addEventListener('click', () => connect(false));
+  $('#btn-connect-ble').addEventListener('click', connectBle);
   $('#btn-connect-any').addEventListener('click', (e) => { e.preventDefault(); connect(true); });
   $('#btn-connect-known').addEventListener('click', connectKnown);
   if (SerialLink.supported() && !state.sim) {
@@ -99,10 +115,67 @@ function attach(link, port) {
   link.onClose((e) => onLinkLost(e ? 'The connection dropped.' : 'The port closed.'));
   $('#view-connect').classList.add('hidden');
   $('#view-device').classList.remove('hidden');
-  $('#dev-kind').textContent = link.kind === 'sim' ? 'Simulated Unit' : 'Connected Over USB';
+  const ble = isBle();
+  $('#dev-kind').textContent = link.sim || link.kind === 'sim' ? `Simulated Unit${ble ? ' Over Bluetooth' : ''}` : ble ? 'Connected Over Bluetooth' : 'Connected Over USB';
   $('#dev-name').textContent = 'Reading the unit';
   $('#dev-sub').textContent = '';
+  applyLinkMode(ble);
   startLiveCard();
+}
+
+// What the page can offer differs by link: the menu console and the USB flash need the cable.
+function applyLinkMode(ble) {
+  $$('#progress-steps li')[0].textContent = ble ? 'Connecting over Bluetooth' : 'Unit restarting and opening its menu';
+  $('#console-intro').classList.toggle('hidden', ble);
+  $('#console-ble-note').classList.toggle('hidden', !ble);
+  $$('.keyrow').forEach((row, i) => { if (i === 0) row.classList.toggle('hidden', ble); });
+  $$('.key').forEach((b) => { if (['rover', 'base', 'bt-on'].includes(b.dataset.key)) b.classList.toggle('hidden', ble); });
+  $('.where').classList.toggle('hidden', ble);
+  $('#term-in').placeholder = ble ? 'Type a $SP command, for example $SPGET,minElev, and press Enter' : 'Type a menu choice or a $SP command and press Enter';
+  $('#usb-update-block').classList.toggle('hidden', ble);
+  $('#usb-update-ble').classList.toggle('hidden', !ble);
+  $('#fw-banner-btn').classList.toggle('hidden', ble);
+  $('#wifi-update-title').textContent = ble ? 'Firmware Over WiFi' : 'Receiver, Radio And Tilt Firmware';
+  $('#wifi-update-intro').textContent = ble
+    ? 'The unit itself fetches and installs anything newer over WiFi: the GNSS receiver, the LoRa radio (Torch), the tilt sensor, and the main firmware when the unit runs a release build. Give it a 2.4 GHz network. The unit restarts when it is done and this page reconnects.'
+    : 'The GNSS receiver, the LoRa radio (Torch) and the tilt sensor are updated by the unit itself over WiFi. Give it a 2.4 GHz network and this page asks the unit to fetch and install whatever is newer. The unit restarts when it is done.';
+}
+
+async function connectBle() {
+  const err = $('#connect-error');
+  err.classList.add('hidden');
+  const btn = $('#btn-connect-ble');
+  btn.disabled = true;
+  try {
+    let link;
+    let device;
+    if (state.sim) {
+      link = new SimLink(state.sim, 'ble');
+      device = await link.requestPort();
+    } else {
+      link = new BleLink();
+      device = await link.requestDevice();
+      btn.textContent = `Connecting to ${device.name || 'the unit'}`;
+      await sleep(0);
+    }
+    await link.open(device);
+    attach(link, device);
+    await runCheck();
+  } catch (e) {
+    if (e && e.name === 'NotFoundError') {
+      err.classList.remove('hidden');
+      err.innerHTML = '<b>No unit was picked.</b> The unit must be powered on with Bluetooth on, and not connected to a phone app at the same time. Its name starts with SparkPNT or SparkFun.';
+      if (e.message && !/cancel/i.test(e.message)) err.innerHTML += ` <span class="muted">(${e.message})</span>`;
+      return;
+    }
+    err.classList.remove('hidden');
+    if (e && e.name === 'NoCommandService') err.textContent = e.message;
+    else if (e && /GATT|connect|disconnected/i.test(e.message || '')) err.innerHTML = `<b>Could not connect over Bluetooth</b> (${e.message}). Move closer, make sure no phone app is connected to the unit, and try again. If it keeps failing, use the USB cable.`;
+    else err.textContent = `Could not connect: ${e.message || e}`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = state.sim ? `Simulated ${state.sim.toUpperCase()} Over Bluetooth` : 'Connect Over Bluetooth';
+  }
 }
 
 async function connect(allPorts) {
@@ -197,6 +270,7 @@ async function disconnect() {
 
 function onLinkLost(why) {
   if (!state.link) return;
+  if (state.expectingRestart) return; // the unit was asked to restart; afterRestart reconnects
   stopLiveCard();
   const d = $('#device-error');
   d.classList.remove('hidden');
@@ -213,8 +287,8 @@ function onLinkLost(why) {
 
 // The progress list shows four stages; each label the check reports maps onto one.
 const STAGE_OF = [
-  [/Opening the configuration menu/, 0],
-  [/Keeping the console awake|Reading system status|Reading the GNSS receiver|Reading the firmware menu/, 1],
+  [/Opening the configuration menu|Asking the unit over Bluetooth/, 0],
+  [/Keeping the console awake|Reading system status|Reading the GNSS receiver|Reading the firmware menu|Reading status and versions/, 1],
   [/Reading settings/, 2],
   [/Closing the menu|Watching the position/, 3],
 ];
@@ -241,7 +315,7 @@ function setStage(text) {
       li.classList.toggle('active', i === stage);
     });
     $('#progress-text').textContent = stage === 0
-      ? 'Connecting restarts the unit; the whole check takes about a minute.'
+      ? (isBle() ? 'Reading over Bluetooth takes about half a minute.' : 'Connecting restarts the unit; the whole check takes about a minute.')
       : text;
   } else {
     $('#progress-text').textContent = text;
@@ -252,9 +326,9 @@ async function runCheck() {
   if (!state.rx || state.busy) return;
   const d = $('#device-error');
   d.classList.add('hidden');
-  setBusy(true, 'Opening the configuration menu');
+  setBusy(true, isBle() ? 'Asking the unit over Bluetooth' : 'Opening the configuration menu');
   try {
-    state.snap = await state.rx.fullCheck((t) => setStage(t));
+    state.snap = await (isBle() ? state.rx.bleCheck((t) => setStage(t)) : state.rx.fullCheck((t) => setStage(t)));
     rerunChecks();
     renderDeviceCard();
   } catch (e) {
@@ -275,7 +349,9 @@ function explainNoAnswer() {
   const link = state.link;
   const rx = link.rxBytes;
   let html;
-  if (rx > 100 && link.nonPrintable > rx / 8) {
+  if (isBle()) {
+    html = '<b>The unit is connected but did not answer.</b> Usually a phone app (for example SparkPNT Link) holds its command channel, or the unit is still starting. Close the app, wait ten seconds and press Run Check Again. If it keeps happening, use the USB cable.';
+  } else if (rx > 100 && link.nonPrintable > rx / 8) {
     html = '<b>This looks like the GNSS data port, not the console.</b> The unit shows two ports; disconnect and pick the other <i>USB-Enhanced-SERIAL</i> entry.';
   } else if (rx > 100) {
     html = '<b>The unit is sending data but did not open its menu.</b> If the lines in the Console tab start with $G, this is the GNSS data port: disconnect and pick the other port. Otherwise try Run Check Again.';
@@ -383,7 +459,9 @@ function renderFindings() {
   $('#fine-title').textContent = `Looks Fine (${fine.length})`;
   for (const x of fine) okBox.appendChild(findingCard(x));
 
-  $('#findings-notes').textContent = notes.map((x) => x.title + (x.detail ? `. ${x.detail}` : '')).join(' ');
+  $('#findings-notes').textContent = notes.length
+    ? notes.map((x) => (x.title + (x.detail ? `. ${x.detail}` : '')).replace(/\.\s*$/, '')).join('. ') + '.'
+    : '';
 
   const dot = worry ? '<span class="dot" role="img" aria-label="needs attention"></span>' : '';
   $('#tabs button[data-tab=check]').innerHTML = `Check${dot}`;
@@ -457,9 +535,11 @@ function sysLine(text) { appendTerm({ dir: 'sys', text }); }
 async function onTermSubmit(ev) {
   ev.preventDefault();
   const inp = $('#term-in');
-  const text = inp.value;
+  let text = inp.value.trim();
   inp.value = '';
   if (!state.rx) return;
+  // A $SP sentence typed without its checksum gets one; the unit rejects it otherwise.
+  if (/^\$SP[A-Z]+(,|$)/.test(text) && !text.includes('*')) text = spFrame(text.slice(1));
   try {
     await state.rx.send(text + '\r');
     if (!state.rx.inMenu) state.rx.inMenu = true;
@@ -594,6 +674,21 @@ async function switchMode(letter, word) {
 
 async function afterRestart() {
   setStage('Waiting for the unit to come back');
+  if (isBle()) {
+    // The Bluetooth link drops while the unit restarts; connect to the same unit again.
+    const link = state.link;
+    const device = state.port;
+    state.expectingRestart = true;
+    await sleep(state.sim ? 1500 : 10000);
+    let ok = false;
+    for (let i = 0; i < 4 && !ok && state.link === link; i++) {
+      try { await link.open(device); ok = true; } catch { await sleep(4000); }
+    }
+    state.expectingRestart = false;
+    if (ok) sysLine('Reconnected over Bluetooth.');
+    else onLinkLost('The unit did not come back over Bluetooth. Press Connect Over Bluetooth again once it has started.');
+    return;
+  }
   await sleep(6000);
   if (state.rx) { state.rx.inMenu = false; state.rx.inCli = false; }
 }
@@ -696,8 +791,9 @@ function renderVersions() {
       const inst = mainVersionOf(state.snap);
       if (rel) {
         latest = rowVersion(rel);
-        if (inst?.dev) { status = 'Developer build: update over USB'; cls = 'status-old'; banner = banner || `This unit runs a developer build (${inst.raw}). The current release is ${rowVersion(rel)}; writing it over USB takes about four minutes.`; }
-        else if (inst && compareMain(inst, rel) < 0) { status = 'Update available below'; cls = 'status-old'; banner = banner || `Main firmware ${rowVersion(rel)} is available (this unit has ${inst.raw}). Updating over USB takes about four minutes.`; }
+        const ble = isBle();
+        if (inst?.dev) { status = 'Developer build: update over USB'; cls = 'status-old'; banner = banner || `This unit runs a developer build (${inst.raw}). The current release is ${rowVersion(rel)}; ${ble ? 'a developer build only updates over the USB cable, which takes about four minutes.' : 'writing it over USB takes about four minutes.'}`; }
+        else if (inst && compareMain(inst, rel) < 0) { status = ble ? 'Update available over WiFi or USB' : 'Update available below'; cls = 'status-old'; banner = banner || `Main firmware ${rowVersion(rel)} is available (this unit has ${inst.raw}). ${ble ? 'The unit can install it itself over WiFi below, or connect the USB cable.' : 'Updating over USB takes about four minutes.'}`; }
         else if (inst) { status = 'Current'; cls = 'status-ok'; }
       }
     } else if (state.fw) {
@@ -726,7 +822,7 @@ function renderVersions() {
 function updateFlashButton() {
   const pick = $('input[name=fw-pick]:checked')?.value;
   const row = state.fw ? latestMain(state.fw.rows, { rc: pick === 'beta' }) : null;
-  $('#btn-flash').disabled = state.busy || !row || !$('#fw-ack').checked || !state.rx;
+  $('#btn-flash').disabled = state.busy || !row || !$('#fw-ack').checked || !state.rx || isBle();
 }
 
 function flashLog(text, partial = false) {
@@ -822,7 +918,9 @@ async function onWifiUpdate() {
   if (!rx || state.busy) return;
   const ssid = $('#wifi-ssid').value.trim();
   const pass = $('#wifi-pass').value;
-  const ok = await askConfirm('Ask the unit to check SparkFun\'s servers over WiFi and install newer firmware for its receiver, radio and tilt sensor? It restarts when done.', { yes: 'Start' });
+  const ok = await askConfirm(isBle()
+    ? 'Ask the unit to check SparkFun\'s servers over WiFi and install newer firmware for its receiver, radio, tilt sensor and main processor? It restarts when done and this page reconnects.'
+    : 'Ask the unit to check SparkFun\'s servers over WiFi and install newer firmware for its receiver, radio and tilt sensor? It restarts when done.', { yes: 'Start' });
   showTab('update');
   if (!ok) return;
   setBusy(true, 'Asking the unit to update over WiFi');
@@ -834,6 +932,7 @@ async function onWifiUpdate() {
       await rx.set('wifiNetwork_0Password', pass);
       await rx.save();
     }
+    if (isBle()) { await wifiUpdateOverBle(rx); return; }
     await rx.goSub('f', /^Menu: Firmware Update/);
     const menuLines = rx.linesSince(Math.max(0, rx.log.length - 40));
     if (!menuLines.some((l) => /^P\) Update to latest product/.test(l))) {
@@ -876,6 +975,76 @@ async function onWifiUpdate() {
   } finally {
     setBusy(false);
   }
+}
+
+// Over Bluetooth the unit's own update is started with a command. The unit answers OK when it
+// starts, reports main firmware progress as ESPUPDATEPROGRESS lines, and drops the link when it
+// restarts. A receiver-only update prints nothing here: its NMEA stream pauses while the chip is
+// written and resumes afterwards, which is what this watches for.
+async function wifiUpdateOverBle(rx) {
+  wifiLog('Asking the unit to check for newer firmware over WiFi');
+  const from = rx.log.length;
+  let started = false;
+  try {
+    await rx.exe('UPDATEFIRMWARE', 90000);
+    started = true;
+  } catch (e) {
+    if (/No Internet/i.test(e.message)) { wifiLog('The unit reports no internet: it could not join a WiFi network. Check the network name and password, and that it is a 2.4 GHz network.'); return; }
+    if (/No answer|NoAnswer/i.test(e.message) || e instanceof NoAnswerError) { wifiLog('No answer in 90 seconds. The unit may be busy joining WiFi; watch its display or try again in a minute.'); return; }
+    wifiLog(`The unit answered: ${e.message}`);
+    return;
+  }
+  if (!started) return;
+  wifiLog('Update started. The unit downloads and writes each newer part; the Bluetooth link drops when it restarts. This can take 10 minutes or more.');
+  const link = state.link;
+  const device = state.port;
+  state.expectingRestart = true;
+  const t0 = Date.now();
+  let lastShown = from;
+  let outcome = null;
+  let lastNmea = link.nmeaLines || 0;
+  let lastNmeaAt = Date.now();
+  let paused = false;
+  while (Date.now() - t0 < 15 * 60 * 1000) {
+    await sleep(1000);
+    if (state.link !== link) { outcome = 'lost'; break; }
+    for (const l of rx.linesSince(lastShown)) {
+      const m = /ESPUPDATEPROGRESS,"?(\d+)"?/.exec(l);
+      if (m) wifiLog(`Main firmware ${m[1]}% written`);
+      else if (/ERROR/i.test(l)) { wifiLog(l); outcome = outcome || 'failed'; }
+      else if (/CURRENT|No new firmware|up to date/i.test(l)) { wifiLog(l); outcome = outcome || 'current'; }
+      else wifiLog(l);
+    }
+    lastShown = rx.log.length;
+    if (!link.connected) { outcome = 'restarted'; break; }
+    const n = link.nmeaLines || 0;
+    if (n !== lastNmea) {
+      if (paused) { outcome = 'done'; break; }
+      lastNmea = n; lastNmeaAt = Date.now();
+    } else if (!paused && Date.now() - lastNmeaAt > 20000) {
+      paused = true;
+      wifiLog('The position stream paused: the unit is writing a chip.');
+    }
+    if (outcome === 'failed' || outcome === 'current') break;
+  }
+  if (outcome === 'restarted') {
+    wifiLog('The unit restarted. Reconnecting over Bluetooth.');
+    await sleep(state.sim ? 1500 : 12000);
+    let ok = false;
+    for (let i = 0; i < 5 && !ok && state.link === link; i++) {
+      try { await link.open(device); ok = true; } catch { await sleep(5000); }
+    }
+    state.expectingRestart = false;
+    if (ok) { wifiLog('Reconnected. Running the check again.'); setBusy(false); await runCheck(); }
+    else onLinkLost('The unit did not come back over Bluetooth. Press Connect Over Bluetooth again once it has started.');
+    return;
+  }
+  state.expectingRestart = false;
+  if (outcome === 'done') { wifiLog('The receiver update finished. Running the check again.'); setBusy(false); await runCheck(); }
+  else if (outcome === 'failed') wifiLog('The unit could not complete the update. The most common cause is no internet on the WiFi network, or a 5 GHz only network; the unit needs 2.4 GHz.');
+  else if (outcome === 'current') wifiLog('Nothing newer was found for this unit.');
+  else if (outcome === 'lost') wifiLog('The connection was lost while waiting.');
+  else wifiLog('No clear outcome was seen in 15 minutes. Run the check again to compare the versions.');
 }
 
 init();

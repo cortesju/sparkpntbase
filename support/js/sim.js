@@ -73,32 +73,45 @@ const fwMenu = (p) => [
   'd) Enable developer options', 'P) Update to latest product specific firmware', 'q) Cancel check and update requests', 'x) Exit',
 ];
 
+// Over "Bluetooth" (via = 'ble') the simulated unit behaves like the real command channel:
+// no menus, $SP sentences answered directly, NMEA GGA and GST once a second, and a restart
+// drops the link.
 export class SimLink {
-  constructor(profileName = 'tx2') {
-    this.kind = 'sim';
+  constructor(profileName = 'tx2', via = 'usb') {
+    this.via = via;
+    this.kind = via === 'ble' ? 'ble' : 'sim';
+    this.sim = true;
     this.profile = JSON.parse(JSON.stringify(PROFILES[profileName] || PROFILES.tx2));
     this.profileName = profileName;
     this.connected = false;
-    this.rxBytes = 0; this.txBytes = 0; this.nonPrintable = 0;
+    this.rxBytes = 0; this.txBytes = 0; this.nonPrintable = 0; this.nmeaLines = 0;
     this._buf = '';
-    this._lineHandlers = new Set(); this._rawHandlers = new Set(); this._closeHandlers = new Set();
+    this._lineHandlers = new Set(); this._rawHandlers = new Set(); this._closeHandlers = new Set(); this._nmeaHandlers = new Set();
     this.state = 'idle';
     this._inputBuf = '';
     this._timer = null;
   }
 
   static supported() { return true; }
-  async requestPort() { return { getInfo: () => ({ usbVendorId: 0, usbProductId: 0 }), sim: true }; }
-  info() { return { sim: this.profileName }; }
+  async requestPort() {
+    if (this.via === 'ble') return { name: this.profile.name || `SparkPNT ${this.profile.product}-SIM`, id: 'sim', sim: true };
+    return { getInfo: () => ({ usbVendorId: 0, usbProductId: 0 }), sim: true };
+  }
+  info() {
+    if (this.via === 'ble') return { sim: this.profileName, bluetoothName: this.profile.name || `SparkPNT ${this.profile.product}-SIM`, bluetoothId: 'sim' };
+    return { sim: this.profileName };
+  }
   label() { return `simulated ${this.profile.product}`; }
   partial() { return this._buf; }
   onLine(fn) { this._lineHandlers.add(fn); return () => this._lineHandlers.delete(fn); }
   onRaw(fn) { this._rawHandlers.add(fn); return () => this._rawHandlers.delete(fn); }
+  onNmea(fn) { this._nmeaHandlers.add(fn); return () => this._nmeaHandlers.delete(fn); }
   onClose(fn) { this._closeHandlers.add(fn); return () => this._closeHandlers.delete(fn); }
 
   async open() {
     this.connected = true;
-    this._timer = setInterval(() => this._tick(), 2000);
+    if (this.via === 'ble') { this.state = 'cli'; this._inputBuf = ''; }
+    this._timer = setInterval(() => this._tick(), this.via === 'ble' ? 1000 : 2000);
   }
 
   async close() {
@@ -107,8 +120,18 @@ export class SimLink {
   }
 
   _tick() {
-    if (!this.connected || this.state !== 'idle') return;
+    if (!this.connected) return;
     const p = this.profile;
+    if (this.via === 'ble') {
+      const q = { 'RTK Fix': 4, 'RTK Float': 5, 'DGPS Fix': 2, '3D Fix': 1 }[p.fixState] ?? 0;
+      const cs = (b) => { let c = 0; for (const ch of b) c ^= ch.charCodeAt(0); return c.toString(16).toUpperCase().padStart(2, '0'); };
+      const gga = `GNGGA,150431.00,2723.12345,N,08232.12345,W,${p.mode === 'Rover' ? q : 1},${p.siv},0.8,12.3,M,-27.0,M,,`;
+      const sd = (p.acc ? p.acc * (0.9 + Math.random() * 0.2) / 1.4142 : 0).toFixed(3);
+      const gst = `GNGST,150431.00,1.2,0.01,0.01,0,${sd},${sd},0.02`;
+      for (const s of [gga, gst]) { this.nmeaLines++; for (const fn of this._nmeaHandlers) fn(`$${s}*${cs(s)}`); }
+      return;
+    }
+    if (this.state !== 'idle') return;
     if (p.mode === 'Rover') {
       const acc = p.acc ? (p.acc * (0.9 + Math.random() * 0.2)).toFixed(3) : '0.000';
       this._emit(`Rover Accuracy (m): ${acc}, SIV: ${p.siv} GNSS State: ${p.fixState || 'No Fix'}`);
@@ -128,6 +151,16 @@ export class SimLink {
   async write(text) {
     this.txBytes += text.length;
     await new Promise((r) => setTimeout(r, 30));
+    if (this.via === 'ble') {
+      this._inputBuf += text;
+      const parts = this._inputBuf.split(/\r\n|\r|\n/);
+      this._inputBuf = parts.pop();
+      for (const cmd of parts) {
+        if (!cmd.length) continue;
+        setTimeout(() => this._cli(cmd), 250); // one round trip on a real unit is about 350 ms
+      }
+      return;
+    }
     for (const ch of text) {
       if (this.state === 'idle') {
         this.state = 'main';
@@ -177,6 +210,15 @@ export class SimLink {
   }
 
   _reboot() {
+    if (this.via === 'ble') {
+      this.profile.uptime = 0; this.profile.resets += 1;
+      setTimeout(() => {
+        this.connected = false;
+        clearInterval(this._timer);
+        for (const fn of this._closeHandlers) fn(new Error('Bluetooth disconnected'));
+      }, 300);
+      return;
+    }
     this.state = 'idle';
     setTimeout(() => {
       this._emit('rst:0x1 (POWERON_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)');
@@ -187,7 +229,10 @@ export class SimLink {
 
   _cli(cmd) {
     const p = this.profile;
-    if (cmd === 'x' || cmd === 'exit') { this._emit('Exiting command mode'); this.state = 'main'; this._emitAll(menu(p)); return; }
+    if (cmd === 'x' || cmd === 'exit') {
+      if (this.via === 'ble') { this._emit('$SP,ERROR,Bad command structure or checksum*00'); return; }
+      this._emit('Exiting command mode'); this.state = 'main'; this._emitAll(menu(p)); return;
+    }
     const body = cmd.startsWith('$') ? cmd.slice(1).replace(/\*[0-9A-Fa-f]{2}$/, '') : cmd;
     const parts = body.split(',');
     const frame = (b) => { let cs = 0; for (const c of b) cs ^= c.charCodeAt(0); return `$${b}*${cs.toString(16).toUpperCase().padStart(2, '0')}`; };
@@ -196,7 +241,7 @@ export class SimLink {
     if (parts[0] === 'SPGET') {
       const k = parts[1];
       if (k === 'changedSettings') {
-        reply(`SPLST,deviceName,char[20],"${p.name || p.product}"`);
+        reply(`SPLST,deviceName,char[20],"${p.product}"`);
         reply(`SPLST,deviceId,char[13],"${p.deviceId}"`);
         for (const [n, t, v] of p.changed) reply(`SPLST,${n},${t},${v}`);
         reply(`SPGET,changedSettings,${p.changed.length + 2},OK`);
@@ -225,7 +270,8 @@ export class SimLink {
     const v = {
       espFirmwareVersion: p.version,
       gnssModuleInfo: p.moduleId,
-      deviceName: p.name || p.product,
+      deviceName: p.product,
+      setState: p.mode === 'Rover' ? 0 : 1,
       deviceId: p.deviceId,
       bluetoothId: p.deviceId.slice(0, 12),
       batteryLevelPercent: p.battery,

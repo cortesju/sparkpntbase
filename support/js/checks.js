@@ -1,8 +1,8 @@
 // Diagnostic rules. Each finding: {id, level, title, detail, action?}
 // level: ok | info | warn | bad. action: {label, kind, args}
 
-import { installedVersions, latestMain, latestFor, compareMain, compareSubsystem, mainVersionOf, rowVersion } from './firmware.js?v=1792701697';
-import { parseEspVersion } from './receiver.js?v=1792701697';
+import { installedVersions, latestMain, latestFor, compareMain, compareSubsystem, mainVersionOf, rowVersion } from './firmware.js?v=1793640457';
+import { parseEspVersion } from './receiver.js?v=1793640457';
 
 const BT_TYPES = { 0: 'Bluetooth Classic (SPP)', 1: 'Bluetooth Low Energy', 2: 'Bluetooth Classic and Low Energy', 3: 'Off' };
 const STATES = { 0: 'ROVER', 1: 'BASE', 2: 'NTP', 3: 'BASE CASTER', 4: 'BASE ASSIST' };
@@ -42,6 +42,10 @@ export function runChecks(snap, fw) {
   if (snap.rebootSeen) {
     add('reboot', 'note', 'Connecting restarted the unit (normal)',
       'Opening the USB port pulses the reset line, so the fix it had was lost and it is reacquiring now');
+  }
+  if (snap.via === 'ble') {
+    add('ble', 'note', 'Read over Bluetooth',
+      `Not visible this way: ${(snap.notRead || []).join(', ')}. The USB cable shows those and opens the menu console`);
   }
   if (snap.errors.length) {
     add('partial', 'info', 'Some readings did not complete', snap.errors.join(' '));
@@ -123,7 +127,8 @@ export function runChecks(snap, fw) {
       { label: 'Turn Bluetooth On', kind: 'bt-on' });
   } else if (btType !== null) {
     add('bt', 'ok', `${BT_TYPES[btType] || 'Bluetooth'} is on`,
-      snap.system?.bluetoothConnected ? 'A phone or computer is connected right now.' : 'No phone is connected right now, which is fine while the cable is in.');
+      snap.via === 'ble' ? 'This page is connected to it over Bluetooth right now.'
+        : snap.system?.bluetoothConnected ? 'A phone or computer is connected right now.' : 'No phone is connected right now, which is fine while the cable is in.');
   }
 
   // Position
@@ -138,7 +143,8 @@ export function runChecks(snap, fw) {
     const st = stateWord(rover.state);
     const sivs = snap.live.filter((l) => l.kind === 'rover').map((l) => l.siv);
     const maxSiv = Math.max(...sivs);
-    const acc = `${rover.accuracy} ${rover.units}`;
+    const hasAcc = rover.accuracy !== null && rover.accuracy !== undefined && !Number.isNaN(rover.accuracy);
+    const acc = hasAcc ? `${rover.beyond ? 'more than ' : ''}${rover.accuracy} ${rover.units}` : 'accuracy not reported';
     if (st === 'NO FIX' && maxSiv < 4) {
       add('fix', 'warn', `NO FIX, ${maxSiv} satellites in view`,
         'The antenna sees almost no sky. Indoors this is expected; outside, hold the unit upright with a clear view of the sky and give it a minute.');
@@ -172,6 +178,8 @@ export function runChecks(snap, fw) {
     add('fix', 'info', 'Live status lines are switched off on this unit', 'The unit was not printing its position while this page watched. Nothing is wrong; the fix state is simply not visible here.');
   } else if (snap.gnss && !snap.gnss.online) {
     add('gnss-offline', 'bad', 'The GNSS receiver inside the unit is offline', 'The main processor cannot talk to the GNSS receiver. Restart the unit; if it stays offline, send us the report.');
+  } else if (snap.via === 'ble') {
+    add('fix', 'info', 'No position sentences arrived over Bluetooth', snap.nmeaSeen ? 'The unit streams data but no GGA sentence was among it. Check the NMEA messages enabled on the unit.' : 'The unit sent nothing on its Bluetooth data channel while this page watched. Restart it and run the check again, or use the USB cable.');
   } else {
     add('fix', 'info', 'No live position lines were seen', 'The unit printed nothing about its position while this page watched. Restart it and run the check again.');
   }

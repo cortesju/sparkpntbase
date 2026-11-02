@@ -20,11 +20,12 @@ index.html        page
 css/style.css     SparkPNT look (Archivo + Roboto, red pill buttons)
 js/config.js      support email, firmware list URLs, CDN links
 js/link.js        Web Serial link
+js/ble.js         Web Bluetooth link ($SP command channel + NMEA from the data channel)
 js/receiver.js    menu driving, $SP commands, parsers
 js/checks.js      diagnostic rules
 js/firmware.js    firmware list, version compare, esptool-js flash
 js/report.js      report text, download, mailto, share
-js/sim.js         simulated units (?sim=tx2, ?sim=fpx, ?sim=torch)
+js/sim.js         simulated units (?sim=tx2, ?sim=fpx, ?sim=torch; add &via=ble for the Bluetooth path)
 js/app.js         page wiring
 assets/           logo
 ```
@@ -54,6 +55,10 @@ Before publishing, confirm `supportEmail` in `js/config.js`.
 - `+` enters command mode. Commands are NMEA framed (`$SPGET,name*CS`). `exit` leaves it.
 - `$SPGET,changedSettings` returns identity rows and every non-default setting (firmware since September 2026).
 - With the menu closed the unit prints `Rover Accuracy (m): 0.014, SIV: 27 GNSS State: RTK Fix` every 2 seconds, which gives the live fix.
+
+## Bluetooth path
+
+Connect Over Bluetooth uses Web Bluetooth (Chrome and Edge on Windows, macOS, Linux, ChromeOS and Android; not iOS, not Safari). No driver is involved. The unit's command service (UUID 7e400001-...) takes `$SP` sentences ending in CR LF and answers on its notify characteristic; the data service (6e400001-...) streams NMEA, from which the page takes GGA (fix quality, satellites) and GST (horizontal accuracy). There is no text menu over Bluetooth, so the Console tab only takes `$SP` commands there, the main firmware cannot be written over USB from that link, and the System menu items (uptime, resets, NTRIP state, microSD, parser counts) are not read. The unit holds off its own GNSS reconfiguration for 60 seconds after the last Bluetooth command, so the page disconnects as soon as the person is done. A restart (reboot, factory reset, WiFi update) drops the link; the page reconnects to the same unit by itself.
 
 ## Hardware facts the page depends on
 

@@ -1,9 +1,9 @@
 // Builds the support report, and the ways to get it to us.
 
-import { CONFIG } from './config.js?v=1792701697';
-import { CLI_KEYS } from './receiver.js?v=1792701697';
-import { installedVersions } from './firmware.js?v=1792701697';
-import { stateWord, formatUptime } from './checks.js?v=1792701697';
+import { CONFIG } from './config.js?v=1793640457';
+import { CLI_KEYS } from './receiver.js?v=1793640457';
+import { installedVersions } from './firmware.js?v=1793640457';
+import { stateWord, formatUptime } from './checks.js?v=1793640457';
 
 export function buildReport({ snap, findings, log, problem, contact, fw }) {
   const L = [];
@@ -16,7 +16,8 @@ export function buildReport({ snap, findings, log, problem, contact, fw }) {
   kv('Created', new Date().toISOString());
   kv('Page version', CONFIG.siteVersion);
   kv('Browser', navigator.userAgent);
-  kv('Connection', snap?.linkKind === 'sim' ? 'SIMULATED UNIT (not real hardware)' : 'USB serial');
+  kv('Connection', snap?.linkKind === 'sim' ? 'SIMULATED UNIT (not real hardware)' : snap?.via === 'ble' ? 'Bluetooth Low Energy (command channel)' : 'USB serial');
+  if (snap?.notRead?.length) kv('Not read over Bluetooth', snap.notRead.join(', '));
   line();
   line('Problem description');
   line('-'.repeat(60));
@@ -55,7 +56,7 @@ export function buildReport({ snap, findings, log, problem, contact, fw }) {
       for (const srv of s.ntripServers) kv(`NTRIP server ${srv.index}`, srv.status);
       kv('Parser filtered', s.parserFiltered ? `${s.parserFiltered.nmea} NMEA / ${s.parserFiltered.rtcm} RTCM / ${s.parserFiltered.ubx} UBX` : null);
       for (const o of s.other) line(`  ${o}`);
-    } else line('(not read)');
+    } else line(snap.via === 'ble' ? '(not available over Bluetooth)' : '(not read)');
     line();
     line('GNSS receiver');
     line('-'.repeat(60));
@@ -68,7 +69,7 @@ export function buildReport({ snap, findings, log, problem, contact, fw }) {
     const live = snap.live.filter((l) => l.kind !== 'battery').slice(-6);
     if (!live.length) line('(none printed while watching)');
     for (const l of live) {
-      if (l.kind === 'rover') line(`  ${stateWord(l.state)}  accuracy ${l.accuracy} ${l.units}  SIV ${l.siv}`);
+      if (l.kind === 'rover') line(`  ${stateWord(l.state)}  accuracy ${l.accuracy === null || l.accuracy === undefined ? '-' : `${l.accuracy} ${l.units}`}  SIV ${l.siv}`);
       else line(`  ${l.state}  SIV ${l.siv}`);
     }
     line();
@@ -171,7 +172,7 @@ export async function buildReportHtml(inputs) {
   const unit = h.product ? `${h.brand} ${h.rtkPrefix ? 'RTK ' : ''}${h.product}` : 'Unknown unit';
   const live = (snap?.live || []).filter((l) => l.kind !== 'battery').slice(-1)[0];
   const fix = live ? (live.kind === 'rover' ? stateWord(live.state) : live.state) : '-';
-  const acc = live && live.kind === 'rover' ? `${live.beyond ? '> ' : ''}${live.accuracy} ${live.units}` : '-';
+  const acc = live && live.kind === 'rover' && live.accuracy !== null && live.accuracy !== undefined ? `${live.beyond ? '> ' : ''}${live.accuracy} ${live.units}` : '-';
   const batt = snap?.cli?.batteryLevelPercent?.value ?? snap?.system?.battery;
   const when = new Date();
   const marks = { ok: '✓', info: 'i', warn: '!', bad: '×', note: '·' };
@@ -224,7 +225,7 @@ footer{margin-top:36px;border-top:1px solid #D9D9D9;padding-top:12px;font-size:1
 </style></head><body><main>
 <header>${logo || '<span class="t">SparkPNT</span>'}<span class="t">Device Support Report</span></header>
 <h1>${esc(unit)}</h1>
-<p class="muted">${esc(when.toLocaleString())} · ${esc(h.version ? `firmware ${h.version}` : '')}${h.bluetoothName ? ` · ${esc(h.bluetoothName)}` : ''}${snap?.linkKind === 'sim' ? ' · SIMULATED UNIT' : ''}</p>
+<p class="muted">${esc(when.toLocaleString())} · ${esc(h.version ? `firmware ${h.version}` : '')}${h.bluetoothName ? ` · ${esc(h.bluetoothName)}` : ''}${snap?.linkKind === 'sim' ? ' · SIMULATED UNIT' : snap?.via === 'ble' ? ' · read over Bluetooth' : ''}</p>
 <div class="card"><div class="stats">
 <div><small>Mode</small>${esc((h.mode || '-').toUpperCase())}</div>
 <div><small>Fix</small>${esc(fix)}</div>
@@ -240,7 +241,7 @@ ${contact?.trim() ? `<p class="muted">Contact: ${esc(contact.trim())}</p>` : ''}
 <h2>Firmware</h2>
 <table>${versions || '<tr><td>(not read)</td></tr>'}</table>
 <h2>System Status</h2>
-<table>${status || '<tr><td>(not read)</td></tr>'}</table>
+<table>${status || `<tr><td>${snap?.via === 'ble' ? `(not available over Bluetooth: ${esc((snap.notRead || []).join(', '))})` : '(not read)'}</td></tr>`}</table>
 <h2>Settings Changed From Defaults</h2>
 <table>${changed || `<tr><td>${esc(snap?.changed?.error ? `(${snap.changed.error})` : '(none)')}</td></tr>`}</table>
 <details><summary>All settings read</summary><table>${settings}</table></details>
@@ -250,7 +251,7 @@ ${contact?.trim() ? `<p class="muted">Contact: ${esc(contact.trim())}</p>` : ''}
 }
 
 export function emailSummary({ snap, findings, problem, fileName }) {
-  const unit = snap?.header ? `${snap.header.brand} ${snap.header.product} ${snap.header.version}` : 'my unit';
+  const unit = snap?.header ? `${snap.header.brand} ${snap.header.product} ${snap.header.version || ''}`.trim() : 'my unit';
   const subject = `Support request: ${unit}${snap?.header?.bluetoothName ? ` (${snap.header.bluetoothName})` : ''}`;
   const lines = [];
   lines.push('Hello SparkPNT,');

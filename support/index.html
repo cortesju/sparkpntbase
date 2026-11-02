@@ -4,13 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SparkPNT Device Support</title>
-  <meta name="description" content="Plug in a SparkPNT or SparkFun RTK unit over USB to check it, reach its configuration menus, update firmware and send a report to support.">
+  <meta name="description" content="Connect a SparkPNT or SparkFun RTK unit over USB or Bluetooth to check it, reach its configuration menus, update firmware and send a report to support.">
   <link rel="icon" href="assets/sparkpnt-logo-black.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css?v=1792701445">
-<!-- PNT Lab public build 2026-10-22. Client tracker and outreach research are not part of this site. -->
+<!-- PNT Lab public build 2026-11-02. Client tracker and outreach research are not part of this site. -->
 </head>
 <body>
 <header class="top">
@@ -25,9 +25,9 @@
 <main>
   <!-- Not connected -->
   <section id="view-connect" class="hero">
-    <p class="eyebrow">Check Your Unit Over USB</p>
+    <p class="eyebrow">Check Your Unit Over USB Or Bluetooth</p>
     <h1>Plug In Your Unit.<br>We Will Take A Look.</h1>
-    <p class="lede">Connect a SparkPNT receiver (TX2, Torch, FP series) or a SparkFun RTK unit with a USB-C cable. This page reads the unit's status, points out anything that looks wrong, gives you a simple way into its configuration menus, and prepares a report you can send to us.</p>
+    <p class="lede">Connect a SparkPNT receiver (TX2, Torch, FP series) or a SparkFun RTK unit with a USB-C cable, or over Bluetooth. This page reads the unit's status, points out anything that looks wrong, gives you a simple way into its configuration menus, and prepares a report you can send to us.</p>
     <ol class="steps-strip">
       <li><span class="num">1</span><div><b>Power the unit on</b><small>The USB port alone does not start it on every model.</small></div></li>
       <li><span class="num">2</span><div><b>Plug in a USB-C cable</b><small>One with data lines; some charging cables carry power only.</small></div></li>
@@ -36,8 +36,10 @@
     <div class="cta-row">
       <button id="btn-connect" class="btn primary">Connect A Unit</button>
       <button id="btn-connect-known" class="btn ghost hidden">Reconnect Last Unit</button>
+      <button id="btn-connect-ble" class="btn ghost hidden">Connect Over Bluetooth</button>
     </div>
     <p class="fine hidden" id="not-listed">Did the list not show your unit? <a href="#" id="btn-connect-any">My Unit Is Not Listed</a> shows every port on this computer.</p>
+    <p class="fine hidden" id="ble-hint"><b>No cable, no driver, or a Mac?</b> Bluetooth reads the unit and makes the report with nothing to install: power the unit on, press Connect Over Bluetooth and pick its name. The menu console and the USB firmware update still need the cable.</p>
     <div id="connect-error" class="notice error hidden"></div>
     <div id="browser-hint" class="notice info hidden"></div>
     <p class="fine">Works in Chrome and Edge on Windows, macOS, Linux and ChromeOS. Everything runs in your browser; nothing leaves this computer until you send the report.</p>
@@ -125,7 +127,8 @@
 
     <!-- Console -->
     <section id="panel-console" class="panel hidden">
-      <p class="muted">This is the unit's own menu. Numbers and letters pick an item; <b>x</b> goes back. The buttons type for you.</p>
+      <p class="muted" id="console-intro">This is the unit's own menu. Numbers and letters pick an item; <b>x</b> goes back. The buttons type for you.</p>
+      <div class="notice info hidden" id="console-ble-note"><b>The menu console needs the USB cable.</b> Over Bluetooth the unit answers commands only: the box below takes a <code>$SP</code> command (for example <code>$SPGET,minElev</code>), the Restart and Factory Reset buttons work, and Read Or Change One Setting at the bottom works.</div>
       <div class="keyrow">
         <span class="keylabel">Go To</span>
         <button class="key" data-key="menu">Main Menu</button>
@@ -201,6 +204,7 @@
       <table class="versions" id="versions"><thead><tr><th>Part</th><th>Installed</th><th>Latest Release</th><th>Status</th></tr></thead><tbody></tbody></table>
       <p class="fine" id="fw-source"></p>
 
+      <div id="usb-update-block">
       <h3 id="usb-update">Main Firmware Over USB</h3>
       <p>The main processor firmware (what the menus call the ESP32 firmware) can be written straight from this page over the cable. The unit restarts twice and keeps its settings. Do not unplug it while the bar moves.</p>
       <div class="update-form">
@@ -211,9 +215,11 @@
       </div>
       <div id="flash-progress" class="bar hidden"><div id="flash-bar"></div></div>
       <pre id="flash-log" class="log hidden"></pre>
+      </div>
+      <div id="usb-update-ble" class="notice info hidden"><b>Main firmware over USB needs the cable.</b> Over Bluetooth the main firmware can only be updated by the unit itself over WiFi, below, and only from a release build.</div>
 
-      <h3>Receiver, Radio And Tilt Firmware</h3>
-      <p>The GNSS receiver, the LoRa radio (Torch) and the tilt sensor are updated by the unit itself over WiFi. Give it a 2.4 GHz network and this page asks the unit to fetch and install whatever is newer. The unit restarts when it is done.</p>
+      <h3 id="wifi-update-title">Receiver, Radio And Tilt Firmware</h3>
+      <p id="wifi-update-intro">The GNSS receiver, the LoRa radio (Torch) and the tilt sensor are updated by the unit itself over WiFi. Give it a 2.4 GHz network and this page asks the unit to fetch and install whatever is newer. The unit restarts when it is done.</p>
       <div class="update-form">
         <input id="wifi-ssid" type="text" placeholder="WiFi network name (leave empty to use the one saved on the unit)" autocomplete="off">
         <input id="wifi-pass" type="password" placeholder="WiFi password" autocomplete="off">
@@ -230,9 +236,9 @@
 <footer>
   <span>SparkPNT Device Support <span id="site-version"></span></span>
   <span>Runs entirely in your browser. Questions: <a id="footer-mail" href="#">support</a></span>
-  <span class="sims">Try without a unit: <a href="?sim=tx2">TX2</a>, <a href="?sim=fpx">FPX-T with problems</a>, <a href="?sim=torch">Torch on old firmware</a></span>
+  <span class="sims">Try without a unit: <a href="?sim=tx2">TX2</a>, <a href="?sim=fpx">FPX-T with problems</a>, <a href="?sim=torch">Torch on old firmware</a>, <a href="?sim=tx2&via=ble">TX2 over Bluetooth</a></span>
 </footer>
 
-<script type="module" src="js/app.js?v=1792701697"></script>
+<script type="module" src="js/app.js?v=1793640457"></script>
 </body>
 </html>
