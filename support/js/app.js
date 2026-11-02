@@ -1,16 +1,16 @@
 // Page wiring: connect, check, console, report, firmware.
 
-import { CONFIG } from './config.js?v=1793640457';
-import { SerialLink } from './link.js?v=1793640457';
-import { BleLink } from './ble.js?v=1793640457';
-import { SimLink } from './sim.js?v=1793640457';
-import { Receiver, NoAnswerError, sleep, spFrame } from './receiver.js?v=1793640457';
-import { runChecks, stateWord } from './checks.js?v=1793640457';
+import { CONFIG } from './config.js?v=1793648706';
+import { SerialLink } from './link.js?v=1793648706';
+import { BleLink } from './ble.js?v=1793648706';
+import { SimLink } from './sim.js?v=1793648706';
+import { Receiver, NoAnswerError, sleep, spFrame } from './receiver.js?v=1793648706';
+import { runChecks, stateWord } from './checks.js?v=1793648706';
 import {
   loadFirmwareList, latestMain, latestFor, rowVersion, fileUrl, downloadBinary, crc32, flashMain,
   installedVersions, mainVersionOf, compareMain, compareSubsystem,
-} from './firmware.js?v=1793640457';
-import { buildReport, buildReportHtml, reportFileName, downloadFile, emailSummary, mailtoUrl } from './report.js?v=1793640457';
+} from './firmware.js?v=1793648706';
+import { buildReport, buildReportHtml, reportFileName, downloadFile, emailSummary, mailtoUrl } from './report.js?v=1793648706';
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];

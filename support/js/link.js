@@ -1,7 +1,7 @@
 // Web Serial link to the receiver's USB console.
 // Emits complete lines and raw text; keeps the partial line for prompt matching.
 
-import { CONFIG } from './config.js?v=1793640457';
+import { CONFIG } from './config.js?v=1793648706';
 
 export class SerialLink {
   constructor() {

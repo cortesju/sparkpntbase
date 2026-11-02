@@ -1,8 +1,8 @@
 // Talks to the RTK Everywhere firmware over its USB console:
 // the serial configuration menus plus the $SP command line.
 
-import { CONFIG } from './config.js?v=1793640457';
-import { parseNmea } from './ble.js?v=1793640457';
+import { CONFIG } from './config.js?v=1793648706';
+import { parseNmea } from './ble.js?v=1793648706';
 
 export function spFrame(body) {
   let cs = 0;
