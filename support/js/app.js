@@ -1,16 +1,16 @@
 // Page wiring: connect, check, console, report, firmware.
 
-import { CONFIG } from './config.js?v=1793648706';
-import { SerialLink } from './link.js?v=1793648706';
-import { BleLink } from './ble.js?v=1793648706';
-import { SimLink } from './sim.js?v=1793648706';
-import { Receiver, NoAnswerError, sleep, spFrame } from './receiver.js?v=1793648706';
-import { runChecks, stateWord } from './checks.js?v=1793648706';
+import { CONFIG } from './config.js?v=1794256052';
+import { SerialLink } from './link.js?v=1794256052';
+import { BleLink } from './ble.js?v=1794256052';
+import { SimLink } from './sim.js?v=1794256052';
+import { Receiver, NoAnswerError, sleep, spFrame } from './receiver.js?v=1794256052';
+import { runChecks, stateWord } from './checks.js?v=1794256052';
 import {
-  loadFirmwareList, latestMain, latestFor, rowVersion, fileUrl, downloadBinary, crc32, flashMain,
+  loadFirmwareList, latestMain, latestFor, rowVersion, fileUrl, downloadBinary, crc32, flashMain, loadEsptool,
   installedVersions, mainVersionOf, compareMain, compareSubsystem,
-} from './firmware.js?v=1793648706';
-import { buildReport, buildReportHtml, reportFileName, downloadFile, emailSummary, mailtoUrl } from './report.js?v=1793648706';
+} from './firmware.js?v=1794256052';
+import { buildReport, buildReportHtml, reportFileName, downloadFile, emailSummary, mailtoUrl } from './report.js?v=1794256052';
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -860,6 +860,8 @@ async function onFlash() {
     }
     flashLog('Downloading the boot record');
     const bootApp0 = await downloadBinary(CONFIG.bootApp0Url);
+    flashLog('Loading the flashing tool');
+    await loadEsptool();
     bar.style.width = '22%';
 
     if (state.link.kind === 'sim') {

@@ -21,8 +21,9 @@ export const CONFIG = {
   bootApp0Url: 'https://raw.githubusercontent.com/sparkfun/SparkFun_RTK_Firmware_Uploader/main/RTK_Firmware_Uploader/resource/boot_app0.bin',
   // Flash addresses used by the SparkFun uploader.
   flash: { bootApp0: 0xe000, app: 0x10000 },
-  // esptool-js, loaded only when an update starts.
-  esptoolUrl: 'https://cdn.jsdelivr.net/npm/esptool-js@0.6.0/lib/index.js',
+  // esptool-js, loaded only when an update starts. The +esm build bundles its dependencies
+  // (pako, atob-lite, the stub JSON files); the raw lib/index.js cannot load in a browser.
+  esptoolUrl: 'https://cdn.jsdelivr.net/npm/esptool-js@0.6.0/+esm',
   // CH342 (and CH340) USB bridges share this vendor id.
   usbVendorId: 0x1a86,
   consoleBaud: 115200,

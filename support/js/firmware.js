@@ -1,7 +1,7 @@
 // Firmware list, version comparison and the USB update of the main (ESP32) firmware.
 
-import { CONFIG } from './config.js?v=1793648706';
-import { parseEspVersion, parseSubsystemVersions, chipFromText } from './receiver.js?v=1793648706';
+import { CONFIG } from './config.js?v=1794256052';
+import { parseEspVersion, parseSubsystemVersions, chipFromText } from './receiver.js?v=1794256052';
 
 export async function loadFirmwareList() {
   let lastError = null;
@@ -193,9 +193,27 @@ export function crc32(bytes) {
   return (crc ^ 0xffffffff) >>> 0;
 }
 
+// Loads esptool-js once. Called before the console is closed, so a download problem
+// never leaves the unit half way into the bootloader.
+let esptoolModule = null;
+export async function loadEsptool() {
+  if (!esptoolModule) {
+    try {
+      esptoolModule = await import(/* webpackIgnore: true */ CONFIG.esptoolUrl);
+    } catch (e) {
+      throw new Error(`Could not load the flashing tool from ${CONFIG.esptoolUrl} (${e.message}). Check the internet connection and try again.`);
+    }
+    if (!esptoolModule.ESPLoader || !esptoolModule.Transport) {
+      esptoolModule = null;
+      throw new Error('The flashing tool loaded but is missing ESPLoader or Transport');
+    }
+  }
+  return esptoolModule;
+}
+
 // Writes the OTA data image and the app with esptool-js. The port must be closed by the caller.
 export async function flashMain({ port, app, bootApp0, baud = 115200, log = () => {}, progress = () => {} }) {
-  const esptool = await import(CONFIG.esptoolUrl);
+  const esptool = await loadEsptool();
   const transport = new esptool.Transport(port, false);
   const terminal = {
     clean() {},
