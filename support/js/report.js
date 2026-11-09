@@ -1,9 +1,9 @@
 // Builds the support report, and the ways to get it to us.
 
-import { CONFIG } from './config.js?v=1794256052';
-import { CLI_KEYS } from './receiver.js?v=1794256052';
-import { installedVersions } from './firmware.js?v=1794256052';
-import { stateWord, formatUptime } from './checks.js?v=1794256052';
+import { CONFIG } from './config.js?v=1794259381';
+import { CLI_KEYS } from './receiver.js?v=1794259381';
+import { installedVersions } from './firmware.js?v=1794259381';
+import { stateWord, formatUptime } from './checks.js?v=1794259381';
 
 export function buildReport({ snap, findings, log, problem, contact, fw }) {
   const L = [];

@@ -1,16 +1,16 @@
 // Page wiring: connect, check, console, report, firmware.
 
-import { CONFIG } from './config.js?v=1794256052';
-import { SerialLink } from './link.js?v=1794256052';
-import { BleLink } from './ble.js?v=1794256052';
-import { SimLink } from './sim.js?v=1794256052';
-import { Receiver, NoAnswerError, sleep, spFrame } from './receiver.js?v=1794256052';
-import { runChecks, stateWord } from './checks.js?v=1794256052';
+import { CONFIG } from './config.js?v=1794259381';
+import { SerialLink } from './link.js?v=1794259381';
+import { BleLink } from './ble.js?v=1794259381';
+import { SimLink } from './sim.js?v=1794259381';
+import { Receiver, NoAnswerError, sleep, spFrame } from './receiver.js?v=1794259381';
+import { runChecks, stateWord } from './checks.js?v=1794259381';
 import {
   loadFirmwareList, latestMain, latestFor, rowVersion, fileUrl, downloadBinary, crc32, flashMain, loadEsptool,
   installedVersions, mainVersionOf, compareMain, compareSubsystem,
-} from './firmware.js?v=1794256052';
-import { buildReport, buildReportHtml, reportFileName, downloadFile, emailSummary, mailtoUrl } from './report.js?v=1794256052';
+} from './firmware.js?v=1794259381';
+import { buildReport, buildReportHtml, reportFileName, downloadFile, emailSummary, mailtoUrl } from './report.js?v=1794259381';
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -135,10 +135,25 @@ function applyLinkMode(ble) {
   $('#usb-update-block').classList.toggle('hidden', ble);
   $('#usb-update-ble').classList.toggle('hidden', !ble);
   $('#fw-banner-btn').classList.toggle('hidden', ble);
-  $('#wifi-update-title').textContent = ble ? 'Firmware Over WiFi' : 'Receiver, Radio And Tilt Firmware';
+  renderWifiIntro(ble, state.snap ? installedVersions(state.snap) : []);
+}
+
+// The WiFi update section names the parts this unit actually has. Before a unit is read,
+// or on firmware that does not list its chips, it stays generic.
+function renderWifiIntro(ble, rows) {
+  const has = (s) => rows.some((v) => v.subsystem === s);
+  const gnss = rows.find((v) => v.subsystem === 'GNSS');
+  const parts = [gnss?.chip ? `the ${gnss.chip} receiver` : 'the GNSS receiver'];
+  const words = ['Receiver'];
+  if (has('LoRa')) { parts.push('the LoRa radio'); words.push('Radio'); }
+  if (has('IMU')) { parts.push('the tilt sensor'); words.push('Tilt'); }
+  const list = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : parts[0];
+  const title = words.length > 1 ? `${words.slice(0, -1).join(', ')} And ${words[words.length - 1]} Firmware` : 'Receiver Firmware';
+  const cap = list.charAt(0).toUpperCase() + list.slice(1);
+  $('#wifi-update-title').textContent = ble ? 'Firmware Over WiFi' : title;
   $('#wifi-update-intro').textContent = ble
-    ? 'The unit itself fetches and installs anything newer over WiFi: the GNSS receiver, the LoRa radio (Torch), the tilt sensor, and the main firmware when the unit runs a release build. Give it a 2.4 GHz network. The unit restarts when it is done and this page reconnects.'
-    : 'The GNSS receiver, the LoRa radio (Torch) and the tilt sensor are updated by the unit itself over WiFi. Give it a 2.4 GHz network and this page asks the unit to fetch and install whatever is newer. The unit restarts when it is done.';
+    ? `The unit itself fetches and installs anything newer over WiFi: ${list}, and the main firmware when the unit runs a release build. Give it a 2.4 GHz network. The unit restarts when it is done and this page reconnects.`
+    : `${cap} ${parts.length > 1 ? 'are' : 'is'} updated by the unit itself over WiFi. Give it a 2.4 GHz network and this page asks the unit to fetch and install whatever is newer. The unit restarts when it is done.`;
 }
 
 async function connectBle() {
@@ -774,6 +789,7 @@ function renderVersions() {
   if (state.fwError) src.textContent = `The firmware list could not be loaded (${state.fwError.message}). Updates are unavailable until it loads.`;
   else if (state.fw) src.textContent = `Firmware list from ${state.fw.url.replace(/^https:\/\/raw\.githubusercontent\.com\//, '')} (checked ${state.fw.loadedAt.toLocaleString()}).`;
   const rows = state.snap ? installedVersions(state.snap) : [];
+  renderWifiIntro(isBle(), rows);
   const rel = state.fw ? latestMain(state.fw.rows, { rc: false }) : null;
   const beta = state.fw ? latestMain(state.fw.rows, { rc: true }) : null;
   $('#fw-release-label').textContent = rel ? `${rowVersion(rel)} (${(rel.bytes / 1048576).toFixed(1)} MB)` : '(list not loaded)';
