@@ -1,16 +1,17 @@
 // Page wiring: connect, check, console, report, firmware.
 
-import { CONFIG } from './config.js?v=1794259381';
-import { SerialLink } from './link.js?v=1794259381';
-import { BleLink } from './ble.js?v=1794259381';
-import { SimLink } from './sim.js?v=1794259381';
-import { Receiver, NoAnswerError, sleep, spFrame } from './receiver.js?v=1794259381';
-import { runChecks, stateWord } from './checks.js?v=1794259381';
+import { CONFIG } from './config.js?v=1794847314';
+import { SerialLink } from './link.js?v=1794847314';
+import { BleLink } from './ble.js?v=1794847314';
+import { SimLink } from './sim.js?v=1794847314';
+import { Receiver, NoAnswerError, sleep, spFrame } from './receiver.js?v=1794847314';
+import { runChecks, stateWord } from './checks.js?v=1794847314';
+import { classifyChanged } from './settings.js?v=1794847314';
 import {
   loadFirmwareList, latestMain, latestFor, rowVersion, fileUrl, downloadBinary, crc32, flashMain, loadEsptool,
   installedVersions, mainVersionOf, compareMain, compareSubsystem,
-} from './firmware.js?v=1794259381';
-import { buildReport, buildReportHtml, reportFileName, downloadFile, emailSummary, mailtoUrl } from './report.js?v=1794259381';
+} from './firmware.js?v=1794847314';
+import { buildReport, buildReportHtml, reportFileName, downloadFile, emailSummary, mailtoUrl } from './report.js?v=1794847314';
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -120,6 +121,7 @@ function attach(link, port) {
   $('#dev-name').textContent = 'Reading the unit';
   $('#dev-sub').textContent = '';
   applyLinkMode(ble);
+  renderChanged();
   startLiveCard();
 }
 
@@ -480,6 +482,73 @@ function renderFindings() {
 
   const dot = worry ? '<span class="dot" role="img" aria-label="needs attention"></span>' : '';
   $('#tabs button[data-tab=check]').innerHTML = `Check${dot}`;
+  renderChanged();
+}
+
+// Changed Settings tab: what differs from how this model leaves the factory.
+function renderChanged() {
+  const tb = $('#changed-table tbody');
+  const stb = $('#shipped-table tbody');
+  tb.innerHTML = ''; stb.innerHTML = '';
+  const tabBtn = $('#tabs button[data-tab=changed]');
+  const label = '<span class="long">Changed </span>Settings';
+  const intro = $('#changed-intro');
+  const table = $('#changed-table');
+  const shipped = $('#changed-shipped');
+  if (!state.snap) {
+    tabBtn.innerHTML = label;
+    intro.textContent = 'Run a check to see which settings on this unit differ from its factory values.';
+    table.classList.add('hidden'); shipped.classList.add('hidden');
+    return;
+  }
+  const c = classifyChanged(state.snap);
+  if (!c.supported) {
+    tabBtn.innerHTML = label;
+    intro.textContent = c.error === 'Not read'
+      ? 'The list of changed settings was not read. Run the check again.'
+      : 'This firmware cannot list its changed settings. Update the main firmware on the Firmware tab, then run the check again.';
+    table.classList.add('hidden'); shipped.classList.add('hidden');
+    return;
+  }
+  const n = c.changed.length;
+  tabBtn.innerHTML = `${label}${n ? ` <span class="count">${n}</span>` : ''}`;
+  const model = c.model || 'unit';
+  const count = `${n} setting${n > 1 ? 's' : ''} on this unit differ${n > 1 ? '' : 's'}`;
+  if (c.hasFactoryList) {
+    intro.textContent = n
+      ? `${count} from how a ${model} leaves the factory.`
+      : `Nothing has been changed. Every setting is how a ${model} leaves the factory.`;
+  } else {
+    intro.textContent = n
+      ? `${count} from the generic firmware defaults. This page has no factory list for the ${model} yet, so some of these may be values the unit ships with.`
+      : `Nothing differs from the generic firmware defaults. This page has no factory list for the ${model} yet.`;
+  }
+  table.classList.toggle('hidden', !n);
+  for (const r of c.changed) {
+    const tr = document.createElement('tr');
+    const td = (text, lab) => { const e = document.createElement('td'); e.dataset.label = lab; e.textContent = text; return e; };
+    const first = document.createElement('td');
+    first.className = 'setting';
+    const b = document.createElement('b'); b.textContent = r.label; first.appendChild(b);
+    const code = document.createElement('code'); code.textContent = r.name; first.appendChild(code);
+    if (r.why) { const w = document.createElement('small'); w.className = 'why'; w.textContent = r.why; first.appendChild(w); }
+    tr.appendChild(first);
+    tr.appendChild(td(r.value, 'This Unit'));
+    tr.appendChild(td(r.def ?? '-', 'Factory'));
+    tb.appendChild(tr);
+  }
+  shipped.classList.toggle('hidden', !c.shipped.length);
+  $('#shipped-title').textContent = `Factory Values The Unit Also Lists (${c.shipped.length})`;
+  for (const r of c.shipped) {
+    const tr = document.createElement('tr');
+    const first = document.createElement('td');
+    first.className = 'setting';
+    const b = document.createElement('b'); b.textContent = r.label; first.appendChild(b);
+    const code = document.createElement('code'); code.textContent = r.name; first.appendChild(code);
+    tr.appendChild(first);
+    const v = document.createElement('td'); v.dataset.label = 'Value'; v.textContent = r.value; tr.appendChild(v);
+    stb.appendChild(tr);
+  }
 }
 
 function runAction(a) {

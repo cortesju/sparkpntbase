@@ -1,8 +1,8 @@
 // Talks to the RTK Everywhere firmware over its USB console:
 // the serial configuration menus plus the $SP command line.
 
-import { CONFIG } from './config.js?v=1794259381';
-import { parseNmea } from './ble.js?v=1794259381';
+import { CONFIG } from './config.js?v=1794847315';
+import { parseNmea } from './ble.js?v=1794847315';
 
 export function spFrame(body) {
   let cs = 0;
@@ -580,6 +580,7 @@ export class Receiver {
     snap.header = await (async () => { progress('Opening the configuration menu'); return this.openMenu(); })();
     await tryStep('Keeping the console awake', () => this.raiseLoraTimeout());
     snap.loraTimeoutRaised = this.loraTimeoutOriginal !== null;
+    snap.loraTimeoutOriginal = this.loraTimeoutOriginal;
     snap.system = await tryStep('Reading system status', () => this.readSystem());
     snap.gnss = await tryStep('Reading the GNSS receiver', () => this.readGnss());
     snap.firmwareMenu = await tryStep('Reading the firmware menu', () => this.readFirmwareMenu());

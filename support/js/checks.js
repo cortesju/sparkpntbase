@@ -1,8 +1,9 @@
 // Diagnostic rules. Each finding: {id, level, title, detail, action?}
 // level: ok | info | warn | bad. action: {label, kind, args}
 
-import { installedVersions, latestMain, latestFor, compareMain, compareSubsystem, mainVersionOf, rowVersion } from './firmware.js?v=1794259381';
-import { parseEspVersion } from './receiver.js?v=1794259381';
+import { installedVersions, latestMain, latestFor, compareMain, compareSubsystem, mainVersionOf, rowVersion } from './firmware.js?v=1794847314';
+import { parseEspVersion } from './receiver.js?v=1794847314';
+import { classifyChanged } from './settings.js?v=1794847314';
 
 const BT_TYPES = { 0: 'Bluetooth Classic (SPP)', 1: 'Bluetooth Low Energy', 2: 'Bluetooth Classic and Low Energy', 3: 'Off' };
 const STATES = { 0: 'ROVER', 1: 'BASE', 2: 'NTP', 3: 'BASE CASTER', 4: 'BASE ASSIST' };
@@ -224,8 +225,8 @@ export function runChecks(snap, fw) {
   const profile = num(snap, 'profileNumber');
   if (profile) add('profile', 'info', `Profile ${profile + 1} is active`, 'Settings profiles switch the whole configuration. Check that the one you expect is active.');
   if (snap.changed?.rows?.length) {
-    const n = snap.changed.rows.filter((r) => !['deviceName', 'deviceId', 'bluetoothId', 'espFirmwareVersion', 'gnssFirmwareVersion', 'gnssModuleInfo'].includes(r.name)).length;
-    if (n) add('changed', 'note', `${n} settings changed from defaults, listed in the report`, '');
+    const n = classifyChanged(snap).changed.length;
+    if (n) add('changed', 'note', `${n} changed setting${n > 1 ? 's' : ''}, listed under Changed Settings`, '');
   }
 
   // The single next step a person should take, taken from the most pressing finding.

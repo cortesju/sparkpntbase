@@ -173,8 +173,15 @@ code { font-family: var(--mono); font-size: .9em; background: var(--light); padd
 /* Tabs */
 .tabs { display: flex; gap: .25rem; border-bottom: 1px solid var(--line); margin: 1.5rem 0 1.25rem; }
 .tabs button { font: 500 1rem Roboto, Arial, sans-serif; background: none; border: 0; border-bottom: 3px solid transparent; padding: .6rem 1rem; color: var(--muted); cursor: pointer; white-space: nowrap; }
-@media (max-width: 480px) { .tabs button { padding: .6rem .6rem; font-size: .95rem; } }
+@media (max-width: 480px) {
+  .tabs { gap: 0; overflow-x: auto; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs button { padding: .6rem .32rem; font-size: .875rem; }
+  .tabs button .count { min-width: 1.15rem; padding: 0 .25rem; margin-left: .2rem; font-size: .72rem; line-height: 1.15rem; }
+}
 .tabs button.active { color: var(--ink); border-bottom-color: var(--red); }
+.tabs button .count { display: inline-block; min-width: 1.35rem; padding: 0 .35rem; border-radius: 999px; background: var(--light); border: 1px solid var(--line); color: var(--ink); font-size: .78rem; line-height: 1.3rem; text-align: center; margin-left: .3rem; vertical-align: middle; }
+@media (max-width: 560px) { .tabs button .long { display: none; } }
 .tabs button .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--red); margin-left: .4rem; vertical-align: middle; }
 
 /* Findings */
@@ -240,3 +247,15 @@ label.check, .update-form label { font-weight: 400; margin: .4rem 0; display: fl
 .log { background: var(--light); border-radius: .5rem; padding: .75rem 1rem; font: .8rem/1.35 var(--mono); max-height: 260px; overflow: auto; white-space: pre-wrap; word-break: break-all; }
 .links { padding-left: 1.25rem; }
 .links li { margin-bottom: .4rem; }
+
+/* Changed Settings */
+.changed td { vertical-align: top; }
+.changed td.setting b { display: block; font-weight: 500; color: var(--ink); }
+.changed td.setting code { display: block; font: .78rem var(--mono); color: var(--muted); overflow-wrap: anywhere; background: none; padding: 0; }
+.changed td.setting .why { display: block; margin-top: .25rem; font-size: .85rem; color: var(--info-text); }
+.changed td:not(.setting) { overflow-wrap: anywhere; }
+.shipped { margin-top: 1.25rem; }
+.shipped summary { cursor: pointer; font-weight: 500; color: var(--muted); padding: .5rem 0; }
+@media (max-width: 480px) { .changed td.setting { display: block; } .changed td.setting::before { content: none; } }
+@media (max-width: 480px) { .tabs button .dot { margin-left: .25rem; } }
+@media (max-width: 380px) { .tabs button { font-size: .84rem; padding: .6rem .28rem; } .tabs button .count { border: 0; background: none; min-width: 0; padding: 0; color: var(--muted); } }

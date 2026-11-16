@@ -9,7 +9,7 @@ const PROFILES = {
     moduleId: 'LG290P03AANR02A01S', chip: 'LG290P',
     subsystems: null, gnssVersion: '2.1', fixState: 'RTK Fix', acc: 0.014, siv: 27,
     ntrip: 1, caster: 'rtk2go.com', mount: 'SPARKPNT1', wifi: 'OfficeWiFi', resets: 4, uptime: 1234,
-    changed: [['enableNtripClient', '_bool', '1'], ['ntripClientCasterHost', 'tCharArry', '"rtk2go.com"'], ['ntripClientMountPoint', 'tCharArry', '"SPARKPNT1"'], ['wifiNetwork_0SSID', 'tCharArry', '"OfficeWiFi"'], ['wifiNetwork_0Password', 'tCharArry', '"hunter2"']],
+    changed: [['enableNtripClient', 'bool', 'true'], ['ntripClientMountPoint', 'char[50]', '"SPARKPNT1"'], ['wifiNetwork_0SSID', 'char[50]', '"OfficeWiFi"'], ['wifiNetwork_0Password', 'char[50]', '"hunter2"']],
   },
   fpx: {
     brand: 'SparkPNT', product: 'FPX-T', version: 'd3.4-Sep 3 2026', mode: 'Rover',
@@ -17,7 +17,7 @@ const PROFILES = {
     battery: 14, voltage: 3.62, sd: 'Offline', gnssLine: 'ZED firmware: HPG 2.00', moduleId: 'ZED-X20P', chip: 'ZED-X20P',
     subsystems: null, gnssVersion: 'HPG 2.00', fixState: '3D Fix', acc: 1.9, siv: 11,
     ntrip: 1, caster: 'ntrip.example.net', mount: 'MOUNT1', wifi: '', resets: 31, uptime: 95, ntripStatus: 'Disconnected',
-    changed: [['enableNtripClient', '_bool', '1'], ['ntripClientCasterHost', 'tCharArry', '"ntrip.example.net"'], ['enableLogging', '_bool', '1'], ['minElev', '_uint8_t', '30']],
+    changed: [['enableEspNow', 'bool', 'true'], ['enableNtripClient', 'bool', 'true'], ['ntripClientCasterHost', 'char[50]', '"ntrip.example.net"'], ['minElev', 'uint8_t', '30'], ['dataPortBaud', 'uint32_t', '115200'], ['constellation_GLONASS', 'tUbxConst', '0']],
     enableLogging: 1, minElev: 30,
   },
   torch: {
@@ -26,7 +26,7 @@ const PROFILES = {
     battery: 55, voltage: 3.81, sd: null, gnssLine: 'UM980 firmware: R4.10Build11833', moduleId: 'UM980', chip: 'UM980',
     subsystems: null, gnssVersion: 'R4.10Build11833', fixState: null, acc: 0, siv: 19,
     ntrip: 0, caster: '', mount: '', wifi: '', resets: 2, uptime: 4000, lora: '2.0.2',
-    changed: [['bluetoothRadioType', 'tBtRadio', '3'], ['lastState', 'tSysState', '1']],
+    changed: [['bluetoothRadioType', 'tBtRadio', '3'], ['enableLora', 'bool', 'true']],
     old: true,
   },
 };
@@ -241,10 +241,13 @@ export class SimLink {
     if (parts[0] === 'SPGET') {
       const k = parts[1];
       if (k === 'changedSettings') {
-        reply(`SPLST,deviceName,char[20],"${p.product}"`);
-        reply(`SPLST,deviceId,char[13],"${p.deviceId}"`);
-        for (const [n, t, v] of p.changed) reply(`SPLST,${n},${t},${v}`);
-        reply(`SPGET,changedSettings,${p.changed.length + 2},OK`);
+        // Every real unit lists its identity and two values the firmware rewrites on first start.
+        const always = [
+          ['deviceName', 'char[20]', `"${p.product}"`], ['deviceId', 'char[13]', `"${p.deviceId}"`], ['profileNumber', 'uint8_t', '0'],
+          ['espFirmwareVersion', 'char[20]', `"${p.version}"`], ['clearBtPairings', 'bool', 'false'], ['profileName', 'char[50]', '"Profile1"'],
+        ];
+        for (const [n, t, v] of [...always, ...p.changed]) reply(`SPLST,${n},${t},${v}`);
+        reply(`SPGET,changedSettings,${always.length + p.changed.length},OK`);
       } else if (k in values) {
         const v = values[k];
         reply(typeof v === 'string' ? `SPGET,${k},"${v}"` : `SPGET,${k},${v}`);

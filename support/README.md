@@ -21,6 +21,7 @@ css/style.css     SparkPNT look (Archivo + Roboto, red pill buttons)
 js/config.js      support email, firmware list URLs, CDN links
 js/link.js        Web Serial link
 js/ble.js         Web Bluetooth link ($SP command channel + NMEA from the data channel)
+js/settings.js    Changed Settings: factory lists per model, plain names, defaults
 js/receiver.js    menu driving, $SP commands, parsers
 js/checks.js      diagnostic rules
 js/firmware.js    firmware list, version compare, esptool-js flash
@@ -55,6 +56,20 @@ Before publishing, confirm `supportEmail` in `js/config.js`.
 - `+` enters command mode. Commands are NMEA framed (`$SPGET,name*CS`). `exit` leaves it.
 - `$SPGET,changedSettings` returns identity rows and every non-default setting (firmware since September 2026).
 - With the menu closed the unit prints `Rover Accuracy (m): 0.014, SIV: 27 GNSS State: RTK Fix` every 2 seconds, which gives the live fix.
+
+## Changed Settings
+
+The unit lists every setting that differs from the generic defaults compiled into the firmware.
+That list always includes the unit's identity, two values the firmware rewrites on first start
+(`clearBtPairings`, `profileName`), and the values the model itself starts with. `js/settings.js`
+sorts the list so the Changed Settings tab and the report show only what somebody changed. The
+rest stays visible under "Factory Values The Unit Also Lists".
+
+`MODEL_FACTORY` holds the per-model values. A row counts as factory only when its value matches.
+To add a model: factory reset a unit, run the check, and copy every row the tab still shows into
+the model's entry. The FPX-T and Torch entries come from two units each and are not yet confirmed
+on a factory-reset unit. Models without an entry are compared with the generic defaults, and the
+tab says so.
 
 ## Bluetooth path
 

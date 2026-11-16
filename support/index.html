@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=1792701445">
-<!-- PNT Lab public build 2026-11-09. Client tracker and outreach research are not part of this site. -->
+  <link rel="stylesheet" href="css/style.css?v=1794847139">
+<!-- PNT Lab public build 2026-11-16. Client tracker and outreach research are not part of this site. -->
 </head>
 <body>
 <header class="top">
@@ -107,6 +107,7 @@
 
     <nav class="tabs" id="tabs">
       <button data-tab="check" class="active">Check</button>
+      <button data-tab="changed"><span class="long">Changed </span>Settings</button>
       <button data-tab="console">Console</button>
       <button data-tab="report">Report</button>
       <button data-tab="update">Firmware</button>
@@ -123,6 +124,18 @@
         <div id="findings-ok"></div>
       </details>
       <p id="findings-notes" class="fine"></p>
+    </section>
+
+    <!-- Changed Settings -->
+    <section id="panel-changed" class="panel hidden">
+      <h3 id="changed-title">Changed Settings</h3>
+      <p id="changed-intro" class="muted">Run a check to see which settings on this unit differ from its factory values.</p>
+      <table class="versions changed" id="changed-table"><thead><tr><th>Setting</th><th>This Unit</th><th>Factory</th></tr></thead><tbody></tbody></table>
+      <details id="changed-shipped" class="shipped hidden">
+        <summary id="shipped-title">Factory Values The Unit Also Lists</summary>
+        <p class="fine">The unit reports these as different from the generic firmware defaults, but every unit of this model starts with them.</p>
+        <table class="versions changed" id="shipped-table"><tbody></tbody></table>
+      </details>
     </section>
 
     <!-- Console -->
@@ -239,6 +252,6 @@
   <span class="sims">Try without a unit: <a href="?sim=tx2">TX2</a>, <a href="?sim=fpx">FPX-T with problems</a>, <a href="?sim=torch">Torch on old firmware</a>, <a href="?sim=tx2&via=ble">TX2 over Bluetooth</a></span>
 </footer>
 
-<script type="module" src="js/app.js?v=1794259381"></script>
+<script type="module" src="js/app.js?v=1794847314"></script>
 </body>
 </html>

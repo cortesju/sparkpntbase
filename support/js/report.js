@@ -1,9 +1,10 @@
 // Builds the support report, and the ways to get it to us.
 
-import { CONFIG } from './config.js?v=1794259381';
-import { CLI_KEYS } from './receiver.js?v=1794259381';
-import { installedVersions } from './firmware.js?v=1794259381';
-import { stateWord, formatUptime } from './checks.js?v=1794259381';
+import { CONFIG } from './config.js?v=1794847315';
+import { CLI_KEYS } from './receiver.js?v=1794847315';
+import { installedVersions } from './firmware.js?v=1794847315';
+import { stateWord, formatUptime } from './checks.js?v=1794847315';
+import { classifyChanged } from './settings.js?v=1794847315';
 
 export function buildReport({ snap, findings, log, problem, contact, fw }) {
   const L = [];
@@ -81,12 +82,22 @@ export function buildReport({ snap, findings, log, problem, contact, fw }) {
       kv(label, v.error ? `(${v.error})` : v.value);
     }
     line();
-    line('Settings that differ from defaults');
+    const ch = classifyChanged(snap);
+    line(`Changed settings (compared with ${ch.hasFactoryList ? `the ${ch.model} factory values` : 'the generic firmware defaults; no factory list for this model'})`);
     line('-'.repeat(60));
-    if (snap.changed?.error) line(`(${snap.changed.error})`);
-    else if (!snap.changed?.rows?.length) line('(none)');
-    else for (const r of snap.changed.rows) line(`  ${r.name} = ${maskSecret(r.name, r.value)}`);
+    if (!ch.supported) line(`(${ch.error})`);
+    else if (!ch.changed.length) line('(none)');
+    else for (const r of ch.changed) {
+      line(`  ${r.label} [${r.name}] = ${r.value}${r.def ? `   (factory: ${r.def})` : ''}`);
+      if (r.why) line(`      ${r.why}`);
+    }
     line();
+    if (ch.shipped.length) {
+      line('Factory values the unit also lists');
+      line('-'.repeat(60));
+      for (const r of ch.shipped) line(`  ${r.label} [${r.name}] = ${r.value}`);
+      line();
+    }
     if (snap.errors.length) {
       line('Readings that failed');
       line('-'.repeat(60));
@@ -187,7 +198,12 @@ export async function buildReportHtml(inputs) {
     ['NTRIP client', s.ntripClient],
     ['Parser filtered', s.parserFiltered ? `${s.parserFiltered.nmea} NMEA / ${s.parserFiltered.rtcm} RTCM / ${s.parserFiltered.ubx} UBX` : null],
   ]) : '';
-  const changed = (snap?.changed?.rows || []).map((r) => `<tr><th>${esc(r.name)}</th><td>${esc(maskSecret(r.name, r.value))}</td></tr>`).join('');
+  const ch = snap ? classifyChanged(snap) : null;
+  const changed = (ch?.changed || []).map((r) => `<tr><th>${esc(r.label)}<code>${esc(r.name)}</code>${r.why ? `<small class="why">${esc(r.why)}</small>` : ''}</th><td>${esc(r.value)}</td><td>${esc(r.def ?? '-')}</td></tr>`).join('');
+  const shipped = (ch?.shipped || []).map((r) => `<tr><th>${esc(r.label)}<code>${esc(r.name)}</code></th><td>${esc(r.value)}</td></tr>`).join('');
+  const changedLead = !ch ? '' : !ch.supported ? '' : ch.hasFactoryList
+    ? `Compared with how a ${ch.model} leaves the factory.`
+    : `No factory list for the ${ch.model || 'unit'} yet, so some of these may be values the unit ships with.`;
   const settings = CLI_KEYS.map(([key, label]) => { const v = snap?.cli?.[key]; return v ? `<tr><th>${esc(label)}</th><td>${esc(v.error ? `(${v.error})` : v.value)}</td></tr>` : ''; }).join('');
   const findingItems = (findings || []).map((f) => `<li class="${f.level}"><span class="mark">${marks[f.level] || ''}</span><div><b>${esc(f.title)}</b>${f.detail ? `<p>${esc(f.detail)}</p>` : ''}</div></li>`).join('');
 
@@ -217,6 +233,9 @@ ul.findings p{margin:2px 0 0;font-size:14px}
 table{border-collapse:collapse;width:100%;font-size:14px}
 th,td{text-align:left;padding:6px 8px;border-bottom:1px solid #EEE;vertical-align:top}
 th{width:38%;font-weight:500;color:#171717}
+.changed th{width:50%}.changed code{display:block;font:12px Consolas,Menlo,monospace;color:#737373;word-break:break-all}
+.changed .why{display:block;margin-top:3px;font-size:13px;font-weight:400;color:#B45309}
+.changed .head{font:500 10px Roboto,Arial,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#737373}
 details{margin-top:18px}summary{cursor:pointer;font-weight:500;color:#171717}
 pre{background:#171717;color:#E6E6E6;border-radius:10px;padding:14px;font:12px/1.4 Consolas,Menlo,monospace;overflow:auto;white-space:pre-wrap;word-break:break-all;max-height:520px}
 footer{margin-top:36px;border-top:1px solid #D9D9D9;padding-top:12px;font-size:12px;color:#737373}
@@ -236,14 +255,16 @@ footer{margin-top:36px;border-top:1px solid #D9D9D9;padding-top:12px;font-size:1
 <h2>Problem Description</h2>
 <div class="problem">${esc(problem?.trim() || '(not filled in)')}</div>
 ${contact?.trim() ? `<p class="muted">Contact: ${esc(contact.trim())}</p>` : ''}
+<h2>Changed Settings</h2>
+${changedLead ? `<p class="muted">${esc(changedLead)}</p>` : ''}
+<table class="changed">${changed ? `<tr><th class="head">Setting</th><td class="head">This Unit</td><td class="head">Factory</td></tr>${changed}` : `<tr><td>${esc(!ch ? '(not read)' : !ch.supported ? `(${ch.error})` : 'Nothing has been changed. Every setting is at its factory value.')}</td></tr>`}</table>
+${shipped ? `<details><summary>Factory values the unit also lists (${ch.shipped.length})</summary><table class="changed">${shipped}</table></details>` : ''}
 <h2>Findings</h2>
 <ul class="findings">${findingItems || '<li><div>(no check was run)</div></li>'}</ul>
 <h2>Firmware</h2>
 <table>${versions || '<tr><td>(not read)</td></tr>'}</table>
 <h2>System Status</h2>
 <table>${status || `<tr><td>${snap?.via === 'ble' ? `(not available over Bluetooth: ${esc((snap.notRead || []).join(', '))})` : '(not read)'}</td></tr>`}</table>
-<h2>Settings Changed From Defaults</h2>
-<table>${changed || `<tr><td>${esc(snap?.changed?.error ? `(${snap.changed.error})` : '(none)')}</td></tr>`}</table>
 <details><summary>All settings read</summary><table>${settings}</table></details>
 <details><summary>Console log and raw data (for SparkPNT support)</summary><pre>${esc(text)}</pre></details>
 <footer>Made with the SparkPNT Device Support page (v${esc(CONFIG.siteVersion)}). Send this file to ${esc(CONFIG.supportEmail)}. Passwords and keys are blanked out.</footer>
