@@ -1,8 +1,8 @@
 // Talks to the RTK Everywhere firmware over its USB console:
 // the serial configuration menus plus the $SP command line.
 
-import { CONFIG } from './config.js?v=1794847315';
-import { parseNmea } from './ble.js?v=1794847315';
+import { CONFIG } from './config.js?v=1794848954';
+import { parseNmea } from './ble.js?v=1794848954';
 
 export function spFrame(body) {
   let cs = 0;
@@ -18,7 +18,7 @@ const BT_RE = /^\*\* Bluetooth (.+?) broadcasting as: (.+?) \*\*$/;
 const BT_OFF_RE = /^\*\* Bluetooth Turned Off \*\*$/;
 const ROVER_RE = /Rover Accuracy \(([^)]+)\): ([<>]?\s*[\d.]+), SIV: (\d+) GNSS State: (.+?)\s*$/;
 const BASE_RE = /^Base (Caster )?Mode - SIV: (\d+)/;
-const BATT_RE = /Batt \((\d+)%\)[:/ ]+Voltage: ([\d.]+)V/;
+const BATT_RE = /Batt \((\d+)%\)[:/ ]+Voltage: ([\d.]+)V(?:\s+(?:C|Disc)harging: (-?[\d.]+)%\/hr)?/;
 const BOOT_RE = /^(rst:0x|ets Jul 29 2019|ets Jun  8 2016|configsip:|entry 0x)/;
 
 // Settings read in command mode. Unknown names on older firmware just answer with an error.
@@ -134,7 +134,7 @@ export class Receiver {
     } else if ((m = BASE_RE.exec(line))) {
       this.live.push({ t: Date.now(), kind: 'base', caster: !!m[1], siv: parseInt(m[2], 10), state: m[1] ? 'BASE CASTER' : 'BASE' });
     } else if ((m = BATT_RE.exec(line))) {
-      this.live.push({ t: Date.now(), kind: 'battery', percent: parseInt(m[1], 10), voltage: parseFloat(m[2]) });
+      this.live.push({ t: Date.now(), kind: 'battery', percent: parseInt(m[1], 10), voltage: parseFloat(m[2]), rate: m[3] !== undefined ? parseFloat(m[3]) : null });
     } else if (BOOT_RE.test(line)) {
       this.rebootSeen = true;
       this.inMenu = false;

@@ -22,6 +22,7 @@ js/config.js      support email, firmware list URLs, CDN links
 js/link.js        Web Serial link
 js/ble.js         Web Bluetooth link ($SP command channel + NMEA from the data channel)
 js/settings.js    Changed Settings: factory lists per model, plain names, defaults
+js/battery.js     Battery Test: sampling, summary and verdict
 js/receiver.js    menu driving, $SP commands, parsers
 js/checks.js      diagnostic rules
 js/firmware.js    firmware list, version compare, esptool-js flash
@@ -70,6 +71,21 @@ To add a model: factory reset a unit, run the check, and copy every row the tab 
 the model's entry. The FPX-T and Torch entries come from two units each and are not yet confirmed
 on a factory-reset unit. Models without an entry are compared with the generic defaults, and the
 tab says so.
+
+## Battery Test
+
+The unit reports its battery level, voltage and charge rate (`batteryLevelPercent`,
+`batteryVoltage`, `batteryChargingPercentPerHour`). The rate is positive while current flows into
+the battery. The test on the Check tab reads all three every five seconds.
+
+Over Bluetooth it has two steps: 90 seconds on battery alone, then 180 seconds with the charger
+the customer picked. Over USB the cable to the computer is the power source, so there is one
+180 second step. The fuel gauge averages the current over about a minute, so the verdict uses the
+last third of a step. Each run goes into the findings and into the report with every reading.
+
+Measured on an FPM-T (October 2026 build): a computer USB port charges at about 9% per hour.
+Not visible to the page: battery health, cycle count, temperature, the charger chip's fault code
+and the voltage agreed with a USB-C charger. The firmware does not expose them.
 
 ## Bluetooth path
 

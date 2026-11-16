@@ -29,6 +29,9 @@ export const CONFIG = {
   consoleBaud: 115200,
   // Seconds of live status to watch after the menus are read.
   liveWatchSeconds: 8,
+  // Battery test: seconds on battery alone, seconds with the charger, seconds between readings.
+  // The fuel gauge averages the current over about a minute, so the charger phase runs three.
+  batteryTest: { baselineSeconds: 90, chargeSeconds: 180, everySeconds: 5 },
 
   docs: {
     home: 'https://docs.sparkpnt.com',

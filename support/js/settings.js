@@ -130,7 +130,11 @@ function describe(row, factory) {
     const f = { name, type: row.type, value: factory[name] };
     def = describe(f, null).value;
   }
-  return { name, label: label || titleFromName(name), value, def, why };
+  if (!label) {
+    const n = /^(.+)_(\d+)$/.exec(name);
+    label = n ? `${titleFromName(n[1])} ${+n[2] + 1}` : titleFromName(name);
+  }
+  return { name, label, value, def, why };
 }
 
 export function modelKey(snap) {

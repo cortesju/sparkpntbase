@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=1794847139">
+  <link rel="stylesheet" href="css/style.css?v=1794848291">
 <!-- PNT Lab public build 2026-11-16. Client tracker and outreach research are not part of this site. -->
 </head>
 <body>
@@ -124,6 +124,32 @@
         <div id="findings-ok"></div>
       </details>
       <p id="findings-notes" class="fine"></p>
+
+      <div id="battery-test" class="battery-test">
+        <h3>Battery Test</h3>
+        <p id="batt-intro" class="muted"></p>
+        <div id="batt-setup" class="batt-setup">
+          <div id="batt-charger-row">
+            <label for="batt-charger">Charger To Test</label>
+            <select id="batt-charger"></select>
+          </div>
+          <button id="btn-batt-start" class="btn ghost" type="button">Start Battery Test</button>
+        </div>
+        <div id="batt-run" class="batt-run hidden">
+          <h4 id="batt-step"></h4>
+          <p id="batt-step-text"></p>
+          <div class="bar"><div id="batt-bar"></div></div>
+          <dl class="batt-now">
+            <div><dt>Level</dt><dd id="batt-now-level">-</dd></div>
+            <div><dt>Voltage</dt><dd id="batt-now-volt">-</dd></div>
+            <div><dt>Charge Rate</dt><dd id="batt-now-rate">-</dd></div>
+          </dl>
+          <button id="btn-batt-next" class="btn primary hidden" type="button">Charger Is Plugged In</button>
+          <button id="btn-batt-stop" class="linkish" type="button">Stop The Test</button>
+        </div>
+        <p id="batt-message" class="fine"></p>
+        <div id="batt-results"></div>
+      </div>
     </section>
 
     <!-- Changed Settings -->
@@ -252,6 +278,6 @@
   <span class="sims">Try without a unit: <a href="?sim=tx2">TX2</a>, <a href="?sim=fpx">FPX-T with problems</a>, <a href="?sim=torch">Torch on old firmware</a>, <a href="?sim=tx2&via=ble">TX2 over Bluetooth</a></span>
 </footer>
 
-<script type="module" src="js/app.js?v=1794847314"></script>
+<script type="module" src="js/app.js?v=1794848954"></script>
 </body>
 </html>

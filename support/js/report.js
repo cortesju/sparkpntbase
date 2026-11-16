@@ -1,10 +1,11 @@
 // Builds the support report, and the ways to get it to us.
 
-import { CONFIG } from './config.js?v=1794847315';
-import { CLI_KEYS } from './receiver.js?v=1794847315';
-import { installedVersions } from './firmware.js?v=1794847315';
-import { stateWord, formatUptime } from './checks.js?v=1794847315';
-import { classifyChanged } from './settings.js?v=1794847315';
+import { CONFIG } from './config.js?v=1794848954';
+import { CLI_KEYS } from './receiver.js?v=1794848954';
+import { installedVersions } from './firmware.js?v=1794848954';
+import { stateWord, formatUptime } from './checks.js?v=1794848954';
+import { classifyChanged } from './settings.js?v=1794848954';
+import { fmtRate } from './battery.js?v=1794848954';
 
 export function buildReport({ snap, findings, log, problem, contact, fw }) {
   const L = [];
@@ -82,6 +83,24 @@ export function buildReport({ snap, findings, log, problem, contact, fw }) {
       kv(label, v.error ? `(${v.error})` : v.value);
     }
     line();
+    if (snap.batteryTests?.length) {
+      line('Battery test');
+      line('-'.repeat(60));
+      for (const run of snap.batteryTests) {
+        const p = run.plugged;
+        line(`${run.charger} (${run.startedAt}, connected over ${run.link === 'usb' ? 'USB' : 'Bluetooth'})`);
+        line(`  Result:        ${run.verdict.title}`);
+        if (run.verdict.detail) line(`                 ${run.verdict.detail}`);
+        const v2 = (v) => (v === null || v === undefined ? '-' : v.toFixed(2));
+        if (run.baseline?.answered) line(`  On battery:    ${fmtRate(run.baseline.rate)}, ${run.baseline.percentEnd}%, ${v2(run.baseline.voltageEnd)} V (${run.baseline.seconds} s)`);
+        if (p?.answered) line(`  With charger:  ${fmtRate(p.rate)}, ${p.percentStart}% to ${p.percentEnd}%, ${v2(p.voltageStart)} to ${v2(p.voltageEnd)} V (${p.seconds} s)`);
+        const t0 = (run.samples.baseline[0] || run.samples.plugged[0])?.t || 0;
+        const row = (tag, s) => line(`    ${tag} +${String(Math.round((s.t - t0) / 1000)).padStart(3)} s  ${String(s.percent ?? '-').padStart(3)}%  ${s.voltage === null ? '-' : s.voltage.toFixed(2)} V  ${s.rate === null ? 'rate not reported' : `${s.rate}%/hr`}`);
+        for (const s of run.samples.baseline) row('battery', s);
+        for (const s of run.samples.plugged) row('charger', s);
+      }
+      line();
+    }
     const ch = classifyChanged(snap);
     line(`Changed settings (compared with ${ch.hasFactoryList ? `the ${ch.model} factory values` : 'the generic firmware defaults; no factory list for this model'})`);
     line('-'.repeat(60));
@@ -199,6 +218,14 @@ export async function buildReportHtml(inputs) {
     ['Parser filtered', s.parserFiltered ? `${s.parserFiltered.nmea} NMEA / ${s.parserFiltered.rtcm} RTCM / ${s.parserFiltered.ubx} UBX` : null],
   ]) : '';
   const ch = snap ? classifyChanged(snap) : null;
+  const battery = (snap?.batteryTests || []).map((run) => {
+    const p = run.plugged;
+    const v2 = (v) => (v === null || v === undefined ? '-' : v.toFixed(2));
+    const nums = p?.answered ? `${p.percentStart}% to ${p.percentEnd}%, ${v2(p.voltageStart)} to ${v2(p.voltageEnd)} V` : '-';
+    return `<tr><th>${esc(run.charger)}<small class="why plain">${esc(new Date(run.startedAt).toLocaleString())}, over ${run.link === 'usb' ? 'USB' : 'Bluetooth'}</small></th>`
+      + `<td>${esc(run.baseline?.answered ? fmtRate(run.baseline.rate) : '-')}</td><td>${esc(p?.answered ? fmtRate(p.rate) : '-')}</td><td>${esc(nums)}</td>`
+      + `<td><b>${esc(run.verdict.title)}</b>${run.verdict.detail ? `<small class="why plain">${esc(run.verdict.detail)}</small>` : ''}</td></tr>`;
+  }).join('');
   const changed = (ch?.changed || []).map((r) => `<tr><th>${esc(r.label)}<code>${esc(r.name)}</code>${r.why ? `<small class="why">${esc(r.why)}</small>` : ''}</th><td>${esc(r.value)}</td><td>${esc(r.def ?? '-')}</td></tr>`).join('');
   const shipped = (ch?.shipped || []).map((r) => `<tr><th>${esc(r.label)}<code>${esc(r.name)}</code></th><td>${esc(r.value)}</td></tr>`).join('');
   const changedLead = !ch ? '' : !ch.supported ? '' : ch.hasFactoryList
@@ -235,6 +262,7 @@ th,td{text-align:left;padding:6px 8px;border-bottom:1px solid #EEE;vertical-alig
 th{width:38%;font-weight:500;color:#171717}
 .changed th{width:50%}.changed code{display:block;font:12px Consolas,Menlo,monospace;color:#737373;word-break:break-all}
 .changed .why{display:block;margin-top:3px;font-size:13px;font-weight:400;color:#B45309}
+.changed .why.plain{color:#737373}.battery th{width:22%}
 .changed .head{font:500 10px Roboto,Arial,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#737373}
 details{margin-top:18px}summary{cursor:pointer;font-weight:500;color:#171717}
 pre{background:#171717;color:#E6E6E6;border-radius:10px;padding:14px;font:12px/1.4 Consolas,Menlo,monospace;overflow:auto;white-space:pre-wrap;word-break:break-all;max-height:520px}
@@ -261,6 +289,8 @@ ${changedLead ? `<p class="muted">${esc(changedLead)}</p>` : ''}
 ${shipped ? `<details><summary>Factory values the unit also lists (${ch.shipped.length})</summary><table class="changed">${shipped}</table></details>` : ''}
 <h2>Findings</h2>
 <ul class="findings">${findingItems || '<li><div>(no check was run)</div></li>'}</ul>
+${battery ? `<h2>Battery Test</h2>
+<table class="changed battery"><tr><th class="head">Charger</th><td class="head">On Battery</td><td class="head">With Charger</td><td class="head">Level And Voltage</td><td class="head">Result</td></tr>${battery}</table>` : ''}
 <h2>Firmware</h2>
 <table>${versions || '<tr><td>(not read)</td></tr>'}</table>
 <h2>System Status</h2>

@@ -259,3 +259,17 @@ label.check, .update-form label { font-weight: 400; margin: .4rem 0; display: fl
 @media (max-width: 480px) { .changed td.setting { display: block; } .changed td.setting::before { content: none; } }
 @media (max-width: 480px) { .tabs button .dot { margin-left: .25rem; } }
 @media (max-width: 380px) { .tabs button { font-size: .84rem; padding: .6rem .28rem; } .tabs button .count { border: 0; background: none; min-width: 0; padding: 0; color: var(--muted); } }
+
+/* Battery test */
+.battery-test { margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--line); }
+.batt-setup { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .75rem 1rem; margin: .75rem 0; }
+.batt-setup label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: .25rem; }
+.batt-setup select { font: inherit; padding: .5rem .6rem; border: 1px solid var(--line); border-radius: .5rem; background: #fff; color: var(--ink); min-width: 14rem; }
+.batt-run { background: var(--light); border-radius: .75rem; padding: 1rem 1.1rem; margin: .75rem 0; }
+.batt-run h4 { margin: 0 0 .25rem; font-size: 1rem; color: var(--ink); }
+.batt-run p { margin: 0 0 .5rem; }
+.batt-now { display: flex; flex-wrap: wrap; gap: .5rem 2rem; margin: .75rem 0; }
+.batt-now dt { font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.batt-now dd { margin: 0; font: 600 1.1rem Archivo, Arial, sans-serif; color: var(--ink); }
+.batt-run .btn { margin-right: 1rem; }
+#batt-results .finding { margin-top: .6rem; }

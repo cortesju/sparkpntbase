@@ -1,17 +1,18 @@
 // Page wiring: connect, check, console, report, firmware.
 
-import { CONFIG } from './config.js?v=1794847314';
-import { SerialLink } from './link.js?v=1794847314';
-import { BleLink } from './ble.js?v=1794847314';
-import { SimLink } from './sim.js?v=1794847314';
-import { Receiver, NoAnswerError, sleep, spFrame } from './receiver.js?v=1794847314';
-import { runChecks, stateWord } from './checks.js?v=1794847314';
-import { classifyChanged } from './settings.js?v=1794847314';
+import { CONFIG } from './config.js?v=1794848954';
+import { SerialLink } from './link.js?v=1794848954';
+import { BleLink } from './ble.js?v=1794848954';
+import { SimLink } from './sim.js?v=1794848954';
+import { Receiver, NoAnswerError, sleep, spFrame } from './receiver.js?v=1794848954';
+import { runChecks, stateWord } from './checks.js?v=1794848954';
+import { classifyChanged } from './settings.js?v=1794848954';
+import { CHARGERS, samplePhase, summarize, judge, fmtRate } from './battery.js?v=1794848954';
 import {
   loadFirmwareList, latestMain, latestFor, rowVersion, fileUrl, downloadBinary, crc32, flashMain, loadEsptool,
   installedVersions, mainVersionOf, compareMain, compareSubsystem,
-} from './firmware.js?v=1794847314';
-import { buildReport, buildReportHtml, reportFileName, downloadFile, emailSummary, mailtoUrl } from './report.js?v=1794847314';
+} from './firmware.js?v=1794848954';
+import { buildReport, buildReportHtml, reportFileName, downloadFile, emailSummary, mailtoUrl } from './report.js?v=1794848954';
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -19,6 +20,7 @@ const $$ = (s) => [...document.querySelectorAll(s)];
 const state = {
   link: null, rx: null, port: null, snap: null, findings: [], fw: null, fwError: null,
   busy: false, tab: 'check', liveTimer: null, sim: null, expectingRestart: false,
+  batteryTests: [], battBaseline: null, battStop: false, battPlug: null,
 };
 
 const isBle = () => !!state.rx?.direct;
@@ -73,6 +75,10 @@ function init() {
   }
   $('#btn-disconnect').addEventListener('click', disconnect);
   $('#btn-recheck').addEventListener('click', () => runCheck());
+  for (const c of CHARGERS) { const o = document.createElement('option'); o.textContent = c; $('#batt-charger').appendChild(o); }
+  $('#btn-batt-start').addEventListener('click', () => runBatteryTest());
+  $('#btn-batt-stop').addEventListener('click', () => { state.battStop = true; if (state.battPlug) state.battPlug(); });
+  $('#btn-batt-next').addEventListener('click', () => { if (state.battPlug) state.battPlug(); });
   $$('#tabs button').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
   $$('.key').forEach((b) => b.addEventListener('click', () => quickKey(b.dataset.key)));
   $('#term-form').addEventListener('submit', onTermSubmit);
@@ -122,6 +128,8 @@ function attach(link, port) {
   $('#dev-sub').textContent = '';
   applyLinkMode(ble);
   renderChanged();
+  state.batteryTests = []; state.battBaseline = null;
+  renderBattery();
   startLiveCard();
 }
 
@@ -310,10 +318,11 @@ const STAGE_OF = [
   [/Closing the menu|Watching the position/, 3],
 ];
 
-function setBusy(on, text = '') {
+function setBusy(on, text = '', { quiet = false } = {}) {
   state.busy = on;
-  $('#progress').classList.toggle('hidden', !on);
-  if (on) setStage(text);
+  $('#progress').classList.toggle('hidden', !on || quiet);
+  if (on && !quiet) setStage(text);
+  $('#btn-batt-start').disabled = on;
   $$('.key').forEach((b) => { b.disabled = on; });
   $('#btn-recheck').disabled = on;
   $('#btn-flash').disabled = on || !$('#fw-ack').checked;
@@ -346,6 +355,7 @@ async function runCheck() {
   setBusy(true, isBle() ? 'Asking the unit over Bluetooth' : 'Opening the configuration menu');
   try {
     state.snap = await (isBle() ? state.rx.bleCheck((t) => setStage(t)) : state.rx.fullCheck((t) => setStage(t)));
+    state.snap.batteryTests = state.batteryTests;
     rerunChecks();
     renderDeviceCard();
   } catch (e) {
@@ -483,6 +493,108 @@ function renderFindings() {
   const dot = worry ? '<span class="dot" role="img" aria-label="needs attention"></span>' : '';
   $('#tabs button[data-tab=check]').innerHTML = `Check${dot}`;
   renderChanged();
+}
+
+// ---------------------------------------------------------------------------
+// Battery test: does the unit take charge from a given power source?
+
+function battSeconds(key) {
+  const s = CONFIG.batteryTest[key];
+  return state.link?.sim ? Math.max(3, Math.round(s / 20)) : s;
+}
+
+function renderBattery() {
+  const ble = isBle();
+  $('#batt-intro').textContent = ble
+    ? 'Shows whether the unit takes charge. Unplug the charger, press Start, and plug it in when the page asks. It takes about five minutes.'
+    : 'Shows whether the unit takes charge from this computer, which powers it through the USB cable. It takes about three minutes. To test a wall charger, connect over Bluetooth instead.';
+  $('#batt-charger-row').classList.toggle('hidden', !ble);
+  $('#btn-batt-start').textContent = state.batteryTests.length ? (ble ? 'Test Another Charger' : 'Run The Battery Test Again') : 'Start Battery Test';
+  const box = $('#batt-results');
+  box.innerHTML = '';
+  for (const run of [...state.batteryTests].reverse()) {
+    const p = run.plugged;
+    const bits = [];
+    if (p?.answered) {
+      if (p.percentStart !== null) bits.push(`Level ${p.percentStart}% to ${p.percentEnd}%`);
+      if (p.voltageStart !== null) bits.push(`voltage ${p.voltageStart.toFixed(2)} to ${p.voltageEnd.toFixed(2)} V`);
+      if (run.baseline?.answered && run.baseline.rate !== null) bits.push(`on battery alone ${fmtRate(run.baseline.rate)}`);
+    }
+    const card = findingCard({ level: run.verdict.level, title: `${run.charger}: ${run.verdict.title}`, detail: run.verdict.detail });
+    if (bits.length) { const s = document.createElement('p'); s.className = 'fine'; s.textContent = `${bits.join(', ')}.`; card.querySelector('div:last-child').appendChild(s); }
+    box.appendChild(card);
+  }
+}
+
+function battStep(title, text) {
+  $('#batt-step').textContent = title;
+  $('#batt-step-text').textContent = text;
+  $('#batt-bar').style.width = '0%';
+}
+
+function battShow(s, fraction) {
+  $('#batt-bar').style.width = `${Math.round(fraction * 100)}%`;
+  $('#batt-now-level').textContent = s.percent === null ? '-' : `${s.percent}%`;
+  $('#batt-now-volt').textContent = s.voltage === null ? '-' : `${s.voltage.toFixed(2)} V`;
+  $('#batt-now-rate').textContent = s.rate === null ? 'Not Reported' : fmtRate(s.rate);
+}
+
+async function runBatteryTest() {
+  if (!state.rx || state.busy) return;
+  const ble = isBle();
+  const rx = state.rx;
+  const charger = ble ? $('#batt-charger').value : 'Computer USB Port';
+  const msg = $('#batt-message');
+  msg.textContent = '';
+  state.battStop = false;
+  setBusy(true, '', { quiet: true });
+  $('#batt-setup').classList.add('hidden');
+  $('#batt-run').classList.remove('hidden');
+  $('#btn-batt-next').classList.add('hidden');
+  const phase = (seconds) => samplePhase(rx, { seconds, every: Math.min(CONFIG.batteryTest.everySeconds, Math.max(1, seconds / 4)), onSample: battShow, shouldStop: () => state.battStop });
+  try {
+    if (ble && !state.battBaseline) {
+      if (state.link.sim) state.link.plug(false);
+      battStep('Step 1 Of 2: On Battery', 'Keep the charger unplugged. Measuring what the unit uses on its own.');
+      const s = await phase(battSeconds('baselineSeconds'));
+      if (state.battStop) { msg.textContent = 'The test was stopped.'; return; }
+      state.battBaseline = { summary: summarize(s), samples: s };
+    }
+    if (ble) {
+      battStep('Step 2 Of 2: Plug In The Charger', `Unplug any other charger, plug the ${charger.toLowerCase()} into the unit, then press the button.`);
+      $('#btn-batt-next').classList.remove('hidden');
+      $('#btn-batt-next').focus();
+      await new Promise((resolve) => { state.battPlug = resolve; });
+      state.battPlug = null;
+      $('#btn-batt-next').classList.add('hidden');
+      if (state.battStop) { msg.textContent = 'The test was stopped.'; return; }
+      if (state.link.sim) state.link.plug(true);
+      battStep('Step 2 Of 2: Charging', 'Leave the charger plugged in. The reading settles after about a minute.');
+    } else {
+      battStep('Measuring On USB Power', 'Leave the cable plugged in. The reading settles after about a minute.');
+    }
+    const s = await phase(battSeconds('chargeSeconds'));
+    if (state.battStop) { msg.textContent = 'The test was stopped before it finished, so there is no result.'; return; }
+    const run = {
+      charger, link: ble ? 'bluetooth' : 'usb', startedAt: new Date(s[0].t).toISOString(),
+      baseline: state.battBaseline ? state.battBaseline.summary : null,
+      plugged: summarize(s),
+      samples: { baseline: state.battBaseline ? state.battBaseline.samples : [], plugged: s },
+    };
+    run.verdict = judge(run);
+    state.batteryTests.push(run);
+    if (state.snap) { state.snap.batteryTests = state.batteryTests; rerunChecks(); }
+  } catch (e) {
+    msg.textContent = `The battery test stopped: ${e.message}.`;
+    if (e instanceof NoAnswerError) offerReconnect();
+  } finally {
+    state.battPlug = null;
+    if (!ble && state.rx === rx) { try { await rx.exitMenu(); } catch { /* the unit went away */ } }
+    $('#batt-run').classList.add('hidden');
+    $('#batt-setup').classList.remove('hidden');
+    setBusy(false);
+    renderBattery();
+  }
 }
 
 // Changed Settings tab: what differs from how this model leaves the factory.

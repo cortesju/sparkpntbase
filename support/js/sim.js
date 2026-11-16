@@ -17,6 +17,7 @@ const PROFILES = {
     battery: 14, voltage: 3.62, sd: 'Offline', gnssLine: 'ZED firmware: HPG 2.00', moduleId: 'ZED-X20P', chip: 'ZED-X20P',
     subsystems: null, gnssVersion: 'HPG 2.00', fixState: '3D Fix', acc: 1.9, siv: 11,
     ntrip: 1, caster: 'ntrip.example.net', mount: 'MOUNT1', wifi: '', resets: 31, uptime: 95, ntripStatus: 'Disconnected',
+    chargeRate: -3,
     changed: [['enableEspNow', 'bool', 'true'], ['enableNtripClient', 'bool', 'true'], ['ntripClientCasterHost', 'char[50]', '"ntrip.example.net"'], ['minElev', 'uint8_t', '30'], ['dataPortBaud', 'uint32_t', '115200'], ['constellation_GLONASS', 'tUbxConst', '0']],
     enableLogging: 1, minElev: 30,
   },
@@ -79,6 +80,7 @@ const fwMenu = (p) => [
 export class SimLink {
   constructor(profileName = 'tx2', via = 'usb') {
     this.via = via;
+    this.plugged = via !== 'ble';
     this.kind = via === 'ble' ? 'ble' : 'sim';
     this.sim = true;
     this.profile = JSON.parse(JSON.stringify(PROFILES[profileName] || PROFILES.tx2));
@@ -103,6 +105,9 @@ export class SimLink {
   }
   label() { return `simulated ${this.profile.product}`; }
   partial() { return this._buf; }
+  // Battery test hook: the page tells the simulated unit when the charger goes in or out.
+  plug(on) { this.plugged = !!on; }
+
   onLine(fn) { this._lineHandlers.add(fn); return () => this._lineHandlers.delete(fn); }
   onRaw(fn) { this._rawHandlers.add(fn); return () => this._rawHandlers.delete(fn); }
   onNmea(fn) { this._nmeaHandlers.add(fn); return () => this._nmeaHandlers.delete(fn); }
@@ -301,6 +306,11 @@ export class SimLink {
       csvUrl: 'https://raw.githubusercontent.com/sparkfun/SparkFun_RTK_Everywhere_Firmware_Binaries/main/RTK-Everywhere-Variants.csv',
       enablePrintRoverAccuracy: 1,
     };
+    // Battery test: over USB the computer powers the unit; over Bluetooth the page says when
+    // the charger goes in. The "with problems" unit never takes charge.
+    const charging = this.plugged && (p.chargeRate ?? 22) > 0;
+    if (charging) v.batteryVoltage = +(p.voltage + 0.12).toFixed(2);
+    if (!p.old) v.batteryChargingPercentPerHour = this.plugged ? (p.chargeRate ?? 22) : -3;
     if (!p.old) {
       v.gnssFirmwareVersion = p.gnssVersion;
       v.tiltState = p.product.endsWith('-T') ? 3 : 0;

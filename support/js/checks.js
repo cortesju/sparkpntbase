@@ -1,9 +1,9 @@
 // Diagnostic rules. Each finding: {id, level, title, detail, action?}
 // level: ok | info | warn | bad. action: {label, kind, args}
 
-import { installedVersions, latestMain, latestFor, compareMain, compareSubsystem, mainVersionOf, rowVersion } from './firmware.js?v=1794847314';
-import { parseEspVersion } from './receiver.js?v=1794847314';
-import { classifyChanged } from './settings.js?v=1794847314';
+import { installedVersions, latestMain, latestFor, compareMain, compareSubsystem, mainVersionOf, rowVersion } from './firmware.js?v=1794848954';
+import { parseEspVersion } from './receiver.js?v=1794848954';
+import { classifyChanged } from './settings.js?v=1794848954';
 
 const BT_TYPES = { 0: 'Bluetooth Classic (SPP)', 1: 'Bluetooth Low Energy', 2: 'Bluetooth Classic and Low Energy', 3: 'Off' };
 const STATES = { 0: 'ROVER', 1: 'BASE', 2: 'NTP', 3: 'BASE CASTER', 4: 'BASE ASSIST' };
@@ -224,6 +224,13 @@ export function runChecks(snap, fw) {
   if (cn0 !== null && cn0 >= 20) add('cn0', 'info', `Minimum signal strength is ${cn0} dB-Hz`, 'High values drop usable satellites. Default is 6.');
   const profile = num(snap, 'profileNumber');
   if (profile) add('profile', 'info', `Profile ${profile + 1} is active`, 'Settings profiles switch the whole configuration. Check that the one you expect is active.');
+  // Battery test results, the newest run for each charger
+  const seen = new Set();
+  for (const run of [...(snap.batteryTests || [])].reverse()) {
+    if (seen.has(run.charger)) continue;
+    seen.add(run.charger);
+    add(`battery-test-${seen.size}`, run.verdict.level, `Battery Test, ${run.charger}: ${run.verdict.title}`, run.verdict.detail);
+  }
   if (snap.changed?.rows?.length) {
     const n = classifyChanged(snap).changed.length;
     if (n) add('changed', 'note', `${n} changed setting${n > 1 ? 's' : ''}, listed under Changed Settings`, '');
