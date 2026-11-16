@@ -1,11 +1,11 @@
 // Builds the support report, and the ways to get it to us.
 
-import { CONFIG } from './config.js?v=1794848954';
-import { CLI_KEYS } from './receiver.js?v=1794848954';
-import { installedVersions } from './firmware.js?v=1794848954';
-import { stateWord, formatUptime } from './checks.js?v=1794848954';
-import { classifyChanged } from './settings.js?v=1794848954';
-import { fmtRate } from './battery.js?v=1794848954';
+import { CONFIG } from './config.js?v=1794851713';
+import { CLI_KEYS } from './receiver.js?v=1794851713';
+import { installedVersions } from './firmware.js?v=1794851713';
+import { stateWord, formatUptime } from './checks.js?v=1794851713';
+import { classifyChanged } from './settings.js?v=1794851713';
+import { fmtRate } from './battery.js?v=1794851713';
 
 export function buildReport({ snap, findings, log, problem, contact, fw }) {
   const L = [];
@@ -71,7 +71,7 @@ export function buildReport({ snap, findings, log, problem, contact, fw }) {
     const live = snap.live.filter((l) => l.kind !== 'battery').slice(-6);
     if (!live.length) line('(none printed while watching)');
     for (const l of live) {
-      if (l.kind === 'rover') line(`  ${stateWord(l.state)}  accuracy ${l.accuracy === null || l.accuracy === undefined ? '-' : `${l.accuracy} ${l.units}`}  SIV ${l.siv}`);
+      if (l.kind === 'rover') line(`  ${stateWord(l.state)}  accuracy ${l.accuracy === null || l.accuracy === undefined || /no fix/i.test(l.state || '') ? '-' : `${l.accuracy} ${l.units}`}  SIV ${l.siv}`);
       else line(`  ${l.state}  SIV ${l.siv}`);
     }
     line();
@@ -202,7 +202,7 @@ export async function buildReportHtml(inputs) {
   const unit = h.product ? `${h.brand} ${h.rtkPrefix ? 'RTK ' : ''}${h.product}` : 'Unknown unit';
   const live = (snap?.live || []).filter((l) => l.kind !== 'battery').slice(-1)[0];
   const fix = live ? (live.kind === 'rover' ? stateWord(live.state) : live.state) : '-';
-  const acc = live && live.kind === 'rover' && live.accuracy !== null && live.accuracy !== undefined ? `${live.beyond ? '> ' : ''}${live.accuracy} ${live.units}` : '-';
+  const acc = live && live.kind === 'rover' && !/no fix/i.test(live.state || '') && live.accuracy !== null && live.accuracy !== undefined ? `${live.beyond ? '> ' : ''}${live.accuracy} ${live.units}` : '-';
   const batt = snap?.cli?.batteryLevelPercent?.value ?? snap?.system?.battery;
   const when = new Date();
   const marks = { ok: '✓', info: 'i', warn: '!', bad: '×', note: '·' };

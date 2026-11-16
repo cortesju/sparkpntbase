@@ -1,18 +1,18 @@
 // Page wiring: connect, check, console, report, firmware.
 
-import { CONFIG } from './config.js?v=1794848954';
-import { SerialLink } from './link.js?v=1794848954';
-import { BleLink } from './ble.js?v=1794848954';
-import { SimLink } from './sim.js?v=1794848954';
-import { Receiver, NoAnswerError, sleep, spFrame } from './receiver.js?v=1794848954';
-import { runChecks, stateWord } from './checks.js?v=1794848954';
-import { classifyChanged } from './settings.js?v=1794848954';
-import { CHARGERS, samplePhase, summarize, judge, fmtRate } from './battery.js?v=1794848954';
+import { CONFIG } from './config.js?v=1794851713';
+import { SerialLink } from './link.js?v=1794851713';
+import { BleLink } from './ble.js?v=1794851713';
+import { SimLink } from './sim.js?v=1794851713';
+import { Receiver, NoAnswerError, sleep, spFrame } from './receiver.js?v=1794851713';
+import { runChecks, stateWord } from './checks.js?v=1794851713';
+import { classifyChanged } from './settings.js?v=1794851713';
+import { CHARGERS, samplePhase, summarize, judge, fmtRate } from './battery.js?v=1794851713';
 import {
   loadFirmwareList, latestMain, latestFor, rowVersion, fileUrl, downloadBinary, crc32, flashMain, loadEsptool,
   installedVersions, mainVersionOf, compareMain, compareSubsystem,
-} from './firmware.js?v=1794848954';
-import { buildReport, buildReportHtml, reportFileName, downloadFile, emailSummary, mailtoUrl } from './report.js?v=1794848954';
+} from './firmware.js?v=1794851713';
+import { buildReport, buildReportHtml, reportFileName, downloadFile, emailSummary, mailtoUrl } from './report.js?v=1794851713';
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -429,7 +429,8 @@ function updateLiveCard() {
   if (last && Date.now() - last.t < 30000) {
     $('#dev-fix').textContent = last.kind === 'rover' ? stateWord(last.state) : last.state;
     $('#dev-siv').textContent = last.siv;
-    $('#dev-acc').textContent = last.kind === 'rover' ? `${last.beyond ? '> ' : ''}${last.accuracy} ${last.units}` : '-';
+    const noFix = /no fix/i.test(last.state || '');
+    $('#dev-acc').textContent = last.kind === 'rover' && !noFix && last.accuracy !== null && last.accuracy !== undefined ? `${last.beyond ? '> ' : ''}${last.accuracy} ${last.units}` : '-';
     if (last.kind === 'base') $('#dev-mode').textContent = last.state;
   }
   const s = state.snap;
