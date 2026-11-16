@@ -1,11 +1,11 @@
 // Builds the support report, and the ways to get it to us.
 
-import { CONFIG } from './config.js?v=1794853674';
-import { CLI_KEYS } from './receiver.js?v=1794853674';
-import { installedVersions } from './firmware.js?v=1794853674';
-import { stateWord, formatUptime } from './checks.js?v=1794853674';
-import { classifyChanged } from './settings.js?v=1794853674';
-import { fmtRate } from './battery.js?v=1794853674';
+import { CONFIG } from './config.js?v=1794854845';
+import { CLI_KEYS } from './receiver.js?v=1794854845';
+import { installedVersions } from './firmware.js?v=1794854845';
+import { stateWord, formatUptime } from './checks.js?v=1794854845';
+import { classifyChanged } from './settings.js?v=1794854845';
+import { fmtRate } from './battery.js?v=1794854845';
 
 export function buildReport({ snap, findings, log, problem, contact, fw }) {
   const L = [];

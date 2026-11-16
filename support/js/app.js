@@ -1,18 +1,18 @@
 // Page wiring: connect, check, console, report, firmware.
 
-import { CONFIG } from './config.js?v=1794853674';
-import { SerialLink } from './link.js?v=1794853674';
-import { BleLink } from './ble.js?v=1794853674';
-import { SimLink } from './sim.js?v=1794853674';
-import { Receiver, NoAnswerError, sleep, spFrame } from './receiver.js?v=1794853674';
-import { runChecks, stateWord } from './checks.js?v=1794853674';
-import { classifyChanged } from './settings.js?v=1794853674';
-import { CHARGERS, samplePhase, summarize, judge, fmtRate } from './battery.js?v=1794853674';
+import { CONFIG } from './config.js?v=1794854845';
+import { SerialLink } from './link.js?v=1794854845';
+import { BleLink } from './ble.js?v=1794854845';
+import { SimLink } from './sim.js?v=1794854845';
+import { Receiver, NoAnswerError, sleep, spFrame } from './receiver.js?v=1794854845';
+import { runChecks, stateWord } from './checks.js?v=1794854845';
+import { classifyChanged } from './settings.js?v=1794854845';
+import { CHARGERS, samplePhase, summarize, judge, fmtRate } from './battery.js?v=1794854845';
 import {
   loadFirmwareList, latestMain, latestFor, rowVersion, fileUrl, downloadBinary, crc32, flashMain, loadEsptool,
   installedVersions, mainVersionOf, compareMain, compareSubsystem,
-} from './firmware.js?v=1794853674';
-import { buildReport, buildReportHtml, reportFileName, downloadFile, emailSummary, mailtoUrl } from './report.js?v=1794853674';
+} from './firmware.js?v=1794854845';
+import { buildReport, buildReportHtml, reportFileName, downloadFile, emailSummary, mailtoUrl } from './report.js?v=1794854845';
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -828,7 +828,7 @@ async function quickKey(key) {
       await rx.exe('FACTORYRESET');
       sysLine('Factory reset requested. The unit erases its settings and restarts.');
       await afterRestart();
-    });
+    }).then(() => { if (state.rx && !state.busy) { showTab('check'); return runCheck(); } return undefined; });
     default: return undefined;
   }
 }
@@ -876,13 +876,22 @@ async function afterRestart() {
     const link = state.link;
     const device = state.port;
     state.expectingRestart = true;
-    await sleep(state.sim ? 1500 : 10000);
-    let ok = false;
-    for (let i = 0; i < 4 && !ok && state.link === link; i++) {
-      try { await link.open(device); ok = true; } catch { await sleep(4000); }
+    // The unit answers first and restarts a little later; a factory reset erases its settings
+    // before it does (measured on an FPM-T: more than ten seconds). Wait for the link to
+    // really drop, then give the unit time to start, then connect to it again.
+    const dropBy = Date.now() + (state.sim ? 3000 : 45000);
+    while (link.connected && Date.now() < dropBy) await sleep(250);
+    const dropped = !link.connected;
+    let ok = !dropped;
+    if (dropped) {
+      await sleep(state.sim ? 1500 : 8000);
+      for (let i = 0; i < 8 && !ok && state.link === link; i++) {
+        try { await link.open(device); ok = true; } catch { await sleep(4000); }
+      }
     }
     state.expectingRestart = false;
-    if (ok) sysLine('Reconnected over Bluetooth.');
+    if (!dropped) sysLine('The unit kept its Bluetooth link, so it may not have restarted.');
+    else if (ok) sysLine('Reconnected over Bluetooth.');
     else onLinkLost('The unit did not come back over Bluetooth. Press Connect Over Bluetooth again once it has started.');
     return;
   }
