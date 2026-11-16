@@ -12,11 +12,14 @@ const IDENTITY = new Set(['deviceName', 'bluetoothId', 'deviceId', 'profileNumbe
 // Rewritten by the firmware itself the first time any unit starts.
 const FIRST_START = { clearBtPairings: 'false', profileName: 'Profile1' };
 
-// Values a model sets for itself while starting, which the firmware's own snapshot misses. A row only counts
-// as factory when its value matches; the same setting with another value is a change.
-// Sources: FPX-T from two units (v3.4 and the October 2026 build), Torch from two units (v3.4).
-// Neither is confirmed on a factory-reset unit yet. A model missing here has no list.
+// Values a model sets for itself while starting, which the firmware's own snapshot misses.
+// A row only counts as factory when its value matches; the same setting with another value is
+// a change.
+// Sources: FPM-T read right after a factory reset (October 2026 build): confirmed.
+// FPX-T from two units (v3.4 and the October 2026 build) and Torch from two units (v3.4):
+// not yet confirmed on a factory-reset unit. A model missing here has no list.
 const MODEL_FACTORY = {
+  'FPM-T': { dataPortBaud: '460800' },
   'FPX-T': { dataPortBaud: '115200', constellation_GLONASS: '0' },
   TORCH: {},
 };

@@ -1,18 +1,18 @@
 // Page wiring: connect, check, console, report, firmware.
 
-import { CONFIG } from './config.js?v=1794854845';
-import { SerialLink } from './link.js?v=1794854845';
-import { BleLink } from './ble.js?v=1794854845';
-import { SimLink } from './sim.js?v=1794854845';
-import { Receiver, NoAnswerError, sleep, spFrame } from './receiver.js?v=1794854845';
-import { runChecks, stateWord } from './checks.js?v=1794854845';
-import { classifyChanged } from './settings.js?v=1794854845';
-import { CHARGERS, samplePhase, summarize, judge, fmtRate } from './battery.js?v=1794854845';
+import { CONFIG } from './config.js?v=1794855123';
+import { SerialLink } from './link.js?v=1794855123';
+import { BleLink } from './ble.js?v=1794855123';
+import { SimLink } from './sim.js?v=1794855123';
+import { Receiver, NoAnswerError, sleep, spFrame } from './receiver.js?v=1794855123';
+import { runChecks, stateWord } from './checks.js?v=1794855123';
+import { classifyChanged } from './settings.js?v=1794855123';
+import { CHARGERS, samplePhase, summarize, judge, fmtRate } from './battery.js?v=1794855123';
 import {
   loadFirmwareList, latestMain, latestFor, rowVersion, fileUrl, downloadBinary, crc32, flashMain, loadEsptool,
   installedVersions, mainVersionOf, compareMain, compareSubsystem,
-} from './firmware.js?v=1794854845';
-import { buildReport, buildReportHtml, reportFileName, downloadFile, emailSummary, mailtoUrl } from './report.js?v=1794854845';
+} from './firmware.js?v=1794855123';
+import { buildReport, buildReportHtml, reportFileName, downloadFile, emailSummary, mailtoUrl } from './report.js?v=1794855123';
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
