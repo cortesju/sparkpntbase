@@ -60,17 +60,17 @@ Before publishing, confirm `supportEmail` in `js/config.js`.
 
 ## Changed Settings
 
-The unit lists every setting that differs from the generic defaults compiled into the firmware.
-That list always includes the unit's identity, two values the firmware rewrites on first start
-(`clearBtPairings`, `profileName`), and the values the model itself starts with. `js/settings.js`
+The unit lists every setting that differs from the firmware's defaults for its receiver type.
+That list still includes the unit's identity, two values the firmware rewrites on first start
+(`clearBtPairings`, `profileName`), and a few values a model sets for itself while starting. `js/settings.js`
 sorts the list so the Changed Settings tab and the report show only what somebody changed. The
 rest stays visible under "Factory Values The Unit Also Lists".
 
 `MODEL_FACTORY` holds the per-model values. A row counts as factory only when its value matches.
 To add a model: factory reset a unit, run the check, and copy every row the tab still shows into
 the model's entry. The FPX-T and Torch entries come from two units each and are not yet confirmed
-on a factory-reset unit. Models without an entry are compared with the generic defaults, and the
-tab says so.
+on a factory-reset unit. Models without an entry show the firmware's list as it is, and the tab
+says so.
 
 ## Battery Test
 

@@ -1,18 +1,18 @@
 // Page wiring: connect, check, console, report, firmware.
 
-import { CONFIG } from './config.js?v=1794851713';
-import { SerialLink } from './link.js?v=1794851713';
-import { BleLink } from './ble.js?v=1794851713';
-import { SimLink } from './sim.js?v=1794851713';
-import { Receiver, NoAnswerError, sleep, spFrame } from './receiver.js?v=1794851713';
-import { runChecks, stateWord } from './checks.js?v=1794851713';
-import { classifyChanged } from './settings.js?v=1794851713';
-import { CHARGERS, samplePhase, summarize, judge, fmtRate } from './battery.js?v=1794851713';
+import { CONFIG } from './config.js?v=1794853674';
+import { SerialLink } from './link.js?v=1794853674';
+import { BleLink } from './ble.js?v=1794853674';
+import { SimLink } from './sim.js?v=1794853674';
+import { Receiver, NoAnswerError, sleep, spFrame } from './receiver.js?v=1794853674';
+import { runChecks, stateWord } from './checks.js?v=1794853674';
+import { classifyChanged } from './settings.js?v=1794853674';
+import { CHARGERS, samplePhase, summarize, judge, fmtRate } from './battery.js?v=1794853674';
 import {
   loadFirmwareList, latestMain, latestFor, rowVersion, fileUrl, downloadBinary, crc32, flashMain, loadEsptool,
   installedVersions, mainVersionOf, compareMain, compareSubsystem,
-} from './firmware.js?v=1794851713';
-import { buildReport, buildReportHtml, reportFileName, downloadFile, emailSummary, mailtoUrl } from './report.js?v=1794851713';
+} from './firmware.js?v=1794853674';
+import { buildReport, buildReportHtml, reportFileName, downloadFile, emailSummary, mailtoUrl } from './report.js?v=1794853674';
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -633,8 +633,8 @@ function renderChanged() {
       : `Nothing has been changed. Every setting is how a ${model} leaves the factory.`;
   } else {
     intro.textContent = n
-      ? `${count} from the generic firmware defaults. This page has no factory list for the ${model} yet, so some of these may be values the unit ships with.`
-      : `Nothing differs from the generic firmware defaults. This page has no factory list for the ${model} yet.`;
+      ? `${count} from the firmware's defaults for this receiver. This page has no confirmed factory list for the ${model} yet, so a few of these may be values the unit ships with.`
+      : `Nothing differs from the firmware's defaults for this receiver.`;
   }
   table.classList.toggle('hidden', !n);
   for (const r of c.changed) {

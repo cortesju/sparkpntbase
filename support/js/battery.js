@@ -5,7 +5,7 @@
 // packs it follows the measured battery current, averaged by the fuel gauge over about a minute,
 // so a verdict uses the readings from the end of a phase.
 
-import { sleep } from './receiver.js?v=1794851713';
+import { sleep } from './receiver.js?v=1794853674';
 
 export const CHARGERS = ['Supplied Charger', 'Phone Charger', 'Laptop USB-C Charger', 'Computer USB Port', 'Power Bank', 'Other Charger'];
 

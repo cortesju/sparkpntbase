@@ -1,11 +1,11 @@
 // Builds the support report, and the ways to get it to us.
 
-import { CONFIG } from './config.js?v=1794851713';
-import { CLI_KEYS } from './receiver.js?v=1794851713';
-import { installedVersions } from './firmware.js?v=1794851713';
-import { stateWord, formatUptime } from './checks.js?v=1794851713';
-import { classifyChanged } from './settings.js?v=1794851713';
-import { fmtRate } from './battery.js?v=1794851713';
+import { CONFIG } from './config.js?v=1794853674';
+import { CLI_KEYS } from './receiver.js?v=1794853674';
+import { installedVersions } from './firmware.js?v=1794853674';
+import { stateWord, formatUptime } from './checks.js?v=1794853674';
+import { classifyChanged } from './settings.js?v=1794853674';
+import { fmtRate } from './battery.js?v=1794853674';
 
 export function buildReport({ snap, findings, log, problem, contact, fw }) {
   const L = [];
@@ -102,7 +102,7 @@ export function buildReport({ snap, findings, log, problem, contact, fw }) {
       line();
     }
     const ch = classifyChanged(snap);
-    line(`Changed settings (compared with ${ch.hasFactoryList ? `the ${ch.model} factory values` : 'the generic firmware defaults; no factory list for this model'})`);
+    line(`Changed settings (compared with ${ch.hasFactoryList ? `the ${ch.model} factory values` : "the firmware's defaults for this receiver; no confirmed factory list for this model"})`);
     line('-'.repeat(60));
     if (!ch.supported) line(`(${ch.error})`);
     else if (!ch.changed.length) line('(none)');
@@ -230,7 +230,7 @@ export async function buildReportHtml(inputs) {
   const shipped = (ch?.shipped || []).map((r) => `<tr><th>${esc(r.label)}<code>${esc(r.name)}</code></th><td>${esc(r.value)}</td></tr>`).join('');
   const changedLead = !ch ? '' : !ch.supported ? '' : ch.hasFactoryList
     ? `Compared with how a ${ch.model} leaves the factory.`
-    : `No factory list for the ${ch.model || 'unit'} yet, so some of these may be values the unit ships with.`;
+    : `Compared with the firmware's defaults for this receiver. No confirmed factory list for the ${ch.model || 'unit'} yet, so a few of these may be values the unit ships with.`;
   const settings = CLI_KEYS.map(([key, label]) => { const v = snap?.cli?.[key]; return v ? `<tr><th>${esc(label)}</th><td>${esc(v.error ? `(${v.error})` : v.value)}</td></tr>` : ''; }).join('');
   const findingItems = (findings || []).map((f) => `<li class="${f.level}"><span class="mark">${marks[f.level] || ''}</span><div><b>${esc(f.title)}</b>${f.detail ? `<p>${esc(f.detail)}</p>` : ''}</div></li>`).join('');
 

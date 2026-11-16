@@ -1,9 +1,10 @@
 // What somebody changed on this unit, as opposed to what it ships with.
 //
-// The unit answers "which settings differ from defaults" by comparing with the generic defaults
-// compiled into the firmware. Every unit therefore also lists its identity, two values the
-// firmware rewrites on first start, and the values its own model starts with. This module sorts
-// the unit's list into those groups, so the page and the report show what was actually changed.
+// The unit answers "which settings differ from defaults" by comparing with the defaults for its
+// own receiver type (the firmware builds that snapshot itself). The answer still carries the
+// unit's identity, two values the firmware rewrites on first start, and a few values a model
+// sets for itself while starting. This module sorts the unit's list into those groups, so the
+// page and the report show what was actually changed.
 
 // Identity, not settings. The unit, firmware and receiver rows of the report already carry them.
 const IDENTITY = new Set(['deviceName', 'bluetoothId', 'deviceId', 'profileNumber', 'espFirmwareVersion', 'gnssFirmwareVersion', 'gnssModuleInfo']);
@@ -11,7 +12,7 @@ const IDENTITY = new Set(['deviceName', 'bluetoothId', 'deviceId', 'profileNumbe
 // Rewritten by the firmware itself the first time any unit starts.
 const FIRST_START = { clearBtPairings: 'false', profileName: 'Profile1' };
 
-// Values a model starts with that differ from the generic firmware defaults. A row only counts
+// Values a model sets for itself while starting, which the firmware's own snapshot misses. A row only counts
 // as factory when its value matches; the same setting with another value is a change.
 // Sources: FPX-T from two units (v3.4 and the October 2026 build), Torch from two units (v3.4).
 // Neither is confirmed on a factory-reset unit yet. A model missing here has no list.
